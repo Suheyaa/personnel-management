@@ -1,6 +1,5 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
-import HomeView from '../views/HomeView.vue'
 import Layout from '../views/Layout.vue'
 
 Vue.use(VueRouter)
@@ -27,6 +26,11 @@ const routes = [
         path: 'post',
         name: 'Post',
         component: ()=> import('../views/post/Post.vue')
+      },
+      {
+        path: 'business',
+        name: 'Business',
+        component: ()=> import('../views/business/Business.vue')
       }
     ]
   },

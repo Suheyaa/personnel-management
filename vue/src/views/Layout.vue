@@ -41,6 +41,12 @@
             </template>
             <el-menu-item index="/post">岗位列表</el-menu-item>
           </el-submenu>
+          <el-menu-item index="business">
+            <template slot="title" index="business">
+              <i class="el-icon-s-unfold"></i>
+              <span>菜单管理</span>
+            </template>
+          </el-menu-item>
         </el-menu>
       </div>
       <!--   主体数据   -->
