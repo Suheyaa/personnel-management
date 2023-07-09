@@ -18,18 +18,12 @@
     </div>
 
     <el-table :data="tableData" stripe border >
-      <el-table-column prop="id" label="岗位编号" ></el-table-column>
-      <el-table-column prop="post_code" label="岗位编码" ></el-table-column>
-      <el-table-column prop="post_name" label="岗位名称"></el-table-column>
-      <el-table-column prop="status" label="岗位状态"></el-table-column>
-
+      <el-table-column prop="dept_name" label="部门名称" ></el-table-column>
+      <el-table-column prop="order_num" label="显示顺序" ></el-table-column>
+      <el-table-column prop="dept_status" label="部门状态"></el-table-column>
 
       <el-table-column prop="create_time" label="创建时间" ></el-table-column>
       <el-table-column prop="update_time" label="更新时间"  ></el-table-column>
-
-
-
-
 
       <el-table-column label="操作"  width="300" fixed="right" ><!--fixed="right"：固定在右侧-->
         <template v-slot="scope">
@@ -44,9 +38,14 @@
             <el-button type="danger" slot="reference"  icon="el-icon-delete" round  ></el-button>
           </el-popconfirm>
 
+          <!--添加按钮-->
+          <el-button type="primary" @click="add2(scope.row)"  icon="el-icon-plus" round   style="margin-left: 10px"></el-button>
+
         </template>
       </el-table-column>
     </el-table>
+
+
 
     <!--分页-->
     <div style="margin-top: 20px">
@@ -61,18 +60,18 @@
     </div>
 
 
-    <!--添加用户按钮弹框：1-->
-    <el-dialog title="添加用户" :visible.sync="dialogFormVisible1" width="30%"><!--dialogFormVisible1：控制这个弹框的显示-->
+    <!--添加按钮弹框：1-->
+    <el-dialog title="添加部门" :visible.sync="dialogFormVisible1" width="30%"><!--dialogFormVisible1：控制这个弹框的显示-->
       <!--ruleForm1用于 修改弹框的表单验证，规则绑定的是 rules-->
       <el-form :model="form" label-width="100px" ref="ruleForm1" :rules="rules" style="width: 85%">
-        <el-form-item label="岗位编码" prop="post_code">
-          <el-input v-model="form.username" placeholder="请输入岗位名称"></el-input>
+        <el-form-item label="部门名称" prop="dept_name">
+          <el-input v-model="form.dept_name" placeholder="请输入岗位名称"></el-input>
         </el-form-item>
-        <el-form-item label="岗位名称" prop="post_name">
-          <el-input v-model="form.name" placeholder="请输入岗位名称"></el-input>
+        <el-form-item label="负责人id" prop="name">
+          <el-input v-model="form.name" placeholder="请输入岗位编码"></el-input>
         </el-form-item>
 
-        <el-form-item label="岗位状态">
+        <el-form-item label="部门状态">
           <el-radio v-model="form.sex"  label="男">正常</el-radio>
           <el-radio v-model="form.sex"  label="女">停用</el-radio>
         </el-form-item>
@@ -87,19 +86,34 @@
       </div>
     </el-dialog>
 
-    <!--修改按钮弹框：2-->
+    <!--修改用户按钮弹框：2-->
     <el-dialog title="修改部门" :visible.sync="dialogFormVisible2" width="30%">
       <!--ruleForm2用于 修改弹框的表单验证，规则绑定的是 rules-->
       <el-form  :model="form" ref="ruleForm2" :rules="rules" label-width="100px"  style="width: 85%">
-        <el-form-item label="岗位编码" prop="post_code">
-          <el-input v-model="form.post_code" placeholder="请输入岗位编码"></el-input>
+        <!--        <el-form-item label="昵称" prop="username">-->
+        <!--          <el-input v-model="form.username" placeholder="请输入昵称" ></el-input>-->
+        <!--        </el-form-item>-->
+        <el-form-item label="上级部门" prop="dept_name">
+          <el-input v-model="form.ancestors" placeholder="请输入上级部门"></el-input>
         </el-form-item>
-        <el-form-item label="岗位名称" prop="post_name">
-          <el-input v-model="form.post_name" placeholder="请输入岗位名称"></el-input>
+        <el-form-item label="部门名称" prop="dept_name">
+          <el-input v-model="form.dept_name" placeholder="请输入部门名称"></el-input>
         </el-form-item>
-        <el-form-item label="岗位状态" prop="status">
-          <el-radio v-model="form.status"  label="可用">可用</el-radio>
-          <el-radio v-model="form.status"  label="不可用">不可用</el-radio>
+        <el-form-item label="显示顺序" prop="order_num">
+          <el-input v-model="form.order_num" placeholder="请输入部门名称"></el-input>
+        </el-form-item>
+        <el-form-item label="负责人" prop="leader_id">
+          <el-input v-model="form.leader_id" placeholder="请输入负责人"></el-input>
+        </el-form-item>
+        <el-form-item label="联系电话" prop="leader_id">
+          <el-input v-model="form.leader_id" placeholder="请输入负责人"></el-input>
+        </el-form-item>
+        <el-form-item label="邮箱" prop="leader_id">
+          <el-input v-model="form.leader_id" placeholder="请输入负责人"></el-input>
+        </el-form-item>
+        <el-form-item label="部门状态" prop="sex">
+          <el-radio v-model="form.sex"  label="男">正常</el-radio>
+          <el-radio v-model="form.sex"  label="女">停用</el-radio>
         </el-form-item>
 
       </el-form>
@@ -119,7 +133,7 @@
 
 
 export default {
-  name: 'Post',
+  name: 'Dept',
   data() {
     //自定义表单验证方法：检查age
     const checkAge = (rule, value, callback) => {
@@ -153,31 +167,27 @@ export default {
       tableData: [//页面数据显示
 
         {
-          id: '1',
-          post_code: 'ceo',
-          post_name: '董事长',
-          status: '1',
+          dept_name: '若依科技',
+          dept_status: '1',
+          order_num: '0',
           create_time:'2023-07-03 20:47:47',
           update_time:'2023-07-03 20:47:47',
         }, {
-          id: '1',
-          post_code: 'ceo',
-          post_name: '董事长',
-          status: '1',
+          dept_name: '若依科技',
+          dept_status: '1',
+          order_num: '0',
           create_time:'2023-07-03 20:47:47',
           update_time:'2023-07-03 20:47:47',
         }, {
-          id: '1',
-          post_code: 'ceo',
-          post_name: '董事长',
-          status: '1',
+          dept_name: '若依科技',
+          dept_status: '1',
+          order_num: '0',
           create_time:'2023-07-03 20:47:47',
           update_time:'2023-07-03 20:47:47',
         }, {
-          id: '1',
-          post_code: 'ceo',
-          post_name: '董事长',
-          status: '1',
+          dept_name: '若依科技',
+          dept_status: '1',
+          order_num: '0',
           create_time:'2023-07-03 20:47:47',
           update_time:'2023-07-03 20:47:47',
         }
@@ -279,7 +289,15 @@ export default {
       //   }
       // })
     },
-
+    //充值按钮 的方法
+    handleAccountAdd(row) {
+      if (row.status == 0){//如果status是0，则表示不可用
+        this.$notify.error('该用户不可使用')
+      }else {
+        this.form = JSON.parse(JSON.stringify(row))
+        this.dialogFormVisible3 = true//让弹框3显示
+      }
+    },
 
     //添加用户 确认提交的方法
     submit1() {

@@ -41,6 +41,15 @@
             </template>
             <el-menu-item index="/post">岗位列表</el-menu-item>
           </el-submenu>
+
+          <el-submenu index="dept">
+            <template slot="title">
+              <i class="el-icon-connection"></i>
+              <span>部门管理</span>
+            </template>
+            <el-menu-item index="/dept">部门列表</el-menu-item>
+          </el-submenu>
+
           <el-menu-item index="business">
             <template slot="title" index="business">
               <i class="el-icon-s-unfold"></i>
