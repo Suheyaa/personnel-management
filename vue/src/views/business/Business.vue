@@ -2,10 +2,10 @@
   <div class="app-container">
     <el-row>
       <el-form :inline="true" :model="searchForm" ref="searchForm" class="demo-form-inline">
-        <el-form-item label="菜单名称" prop="businessName">
-          <el-input v-model.trim="searchForm.businessName" placeholder="菜单名称" clearable/>
+        <el-form-item label="系统名称" prop="businessName">
+          <el-input v-model.trim="searchForm.businessName" placeholder="系统名称" clearable/>
         </el-form-item>
-        <el-form-item label="菜单状态" prop="status">
+        <el-form-item label="系统状态" prop="status">
           <el-select v-model="searchForm.status" clearable placeholder="请选择">
             <el-option
                 v-for="item in options"
@@ -43,7 +43,7 @@
         row-key="menuId"
         :header-cell-style="{background:'#f5f7fa',color:'#606266'}"
         style="padding-top:20px">
-      <el-table-column prop="businessName" label="菜单名称"
+      <el-table-column prop="businessName" label="系统名称"
                        :show-overflow-tooltip="true" align="center" sortable/>
       <el-table-column prop="icon" label="图标" align="center">
         <template slot-scope="scope">
@@ -86,13 +86,13 @@
                      layout="prev, pager, next"/>
     </div>
 
-    <!-- 添加或修改菜单对话框 -->
+    <!-- 添加或修改系统对话框 -->
     <el-dialog :title="title" :visible.sync="open" width="680px" append-to-body
                v-if="refresh" :show-close="showClose">
       <el-form ref="form" :model="form" :rules="rules" label-width="100px">
         <el-row>
           <el-col :span="24">
-            <el-form-item label="菜单图标" prop="icon">
+            <el-form-item label="系统图标" prop="icon">
               <el-popover
                   placement="bottom-start"
                   width="460"
@@ -113,8 +113,8 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="菜单名称" prop="businessName">
-              <el-input v-model="form.businessName" placeholder="请输入菜单名称" clearable/>
+            <el-form-item label="系统名称" prop="businessName">
+              <el-input v-model="form.businessName" placeholder="请输入系统名称" clearable/>
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -146,7 +146,7 @@
                 <el-tooltip content="选择停用则路由将不会出现在侧边栏，也不能被访问" placement="top">
                 <i class="el-icon-question"/>
                 </el-tooltip>
-                菜单状态
+                系统状态
               </span>
               <template>
                 <el-radio v-model="form.status" :label="1">正常</el-radio>
@@ -221,11 +221,8 @@ export default {
       radio: '1',
       // 表单校验
       rules: {
-        icon: [
-          {required: true, message: "图标不能为空", trigger: "blur"}
-        ],
         businessName: [
-          {required: true, message: "菜单名称不能为空", trigger: "blur"}
+          {required: true, message: "系统名称不能为空", trigger: "blur"}
         ],
         permission: [
           {required: true, message: "权限字符不能为空", trigger: "blur"}
@@ -253,7 +250,7 @@ export default {
         businessName: undefined,
         path: undefined,
         permission: undefined,
-        status: '1'
+        status: 1
       };
     },
     handleCurrentChange(val) {
@@ -268,7 +265,7 @@ export default {
       // 清空图标的逻辑，将图标重置为默认值或null
       this.form.icon = null;
     },
-    /** 查询菜单列表 */
+    /** 查询系统列表 */
     getList() {
       //分页查询
       this.loading = true;
@@ -326,7 +323,7 @@ export default {
       this.refresh = true;
       this.reset();
       this.open = true;
-      this.title = "添加菜单";
+      this.title = "添加系统";
     },
     /** 修改按钮操作 */
     handleUpdate(id) {
@@ -340,7 +337,7 @@ export default {
         if (code === 200) {
           this.refresh = true;
           this.reset();
-          this.title = "修改菜单";
+          this.title = "修改系统";
           this.form = res.data.data;
           this.open = true;
         }
@@ -350,7 +347,7 @@ export default {
     },
     /** 删除按钮操作 */
     handleDelete(id) {
-      this.$confirm("确认删除该菜单吗？", "提示", {
+      this.$confirm("确认删除该系统吗？", "提示", {
         confirmButtonText: "确定",
         cancelButtonText: "取消",
         type: "warning"

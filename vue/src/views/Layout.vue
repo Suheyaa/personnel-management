@@ -53,7 +53,7 @@
           <el-menu-item index="business">
             <template slot="title" index="business">
               <i class="el-icon-s-unfold"></i>
-              <span>菜单管理</span>
+              <span>系统管理</span>
             </template>
           </el-menu-item>
         </el-menu>
