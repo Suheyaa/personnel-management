@@ -94,7 +94,11 @@
           <el-input v-model="form.permission"></el-input>
         </el-form-item>
         <el-form-item label="状态" prop="status">
-          <el-select v-model="form.status" placeholder="请选择">
+          <el-select v-if="this.dialogFlag === 'save'" v-model="form.status" placeholder="请选择">
+            <el-option label="启用" value="1"></el-option>
+            <el-option label="禁用" value="0"></el-option>
+          </el-select>
+          <el-select v-if="this.dialogFlag === 'edit'" v-model="form.status" placeholder="请选择">
             <el-option label="启用" :value="1"></el-option>
             <el-option label="禁用" :value="0"></el-option>
           </el-select>
