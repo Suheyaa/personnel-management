@@ -268,7 +268,22 @@ export default {
       return this.filteredRoles.slice(startIndex, endIndex);
     },
   },
+  created:function () {
+    // 初始化，配合后盾测试时打开
+    // this.roleList();
+    // this.businessList();
+
+  },
   methods: {
+    // 无条件查询
+    businessList() {
+      axios({
+        method: "get",
+        url: this.urls.businessList
+      }).then((res) => {
+        this.businesses = res.data.data
+      })
+    },
     // 翻页
     handlePageChange(currentPage) {
       this.currentPage = currentPage;
