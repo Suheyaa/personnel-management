@@ -34,6 +34,13 @@
             </template>
             <el-menu-item index="/user">用户列表</el-menu-item>
           </el-submenu>
+          <el-submenu index="role">
+            <template slot="title">
+              <i class="el-icon-user"></i>
+              <span>角色管理</span>
+            </template>
+            <el-menu-item index="/role">角色列表</el-menu-item>
+          </el-submenu>
           <el-submenu index="post">
             <template slot="title">
               <i class="el-icon-question"></i>
