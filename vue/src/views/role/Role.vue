@@ -270,8 +270,8 @@ export default {
   },
   created:function () {
     // 初始化，配合后盾测试时打开
-    // this.roleList();
-    // this.businessList();
+    this.roleList();
+    this.businessList();
 
   },
   methods: {
