@@ -19,8 +19,8 @@
         <el-form :inline="true" class="search-form">
           <el-form-item label="状态">
             <el-select v-model="searchForm.status" placeholder="请选择">
-              <el-option label="启用" value="启用"></el-option>
-              <el-option label="禁用" value="禁用"></el-option>
+              <el-option label="启用" value="1"></el-option>
+              <el-option label="禁用" value="0"></el-option>
             </el-select>
           </el-form-item>
         </el-form>
@@ -55,9 +55,14 @@
     <el-button type="danger" @click="handleDeleteSelected" :disabled="selectedRoles.length === 0">删除选中</el-button>
     <el-button type="primary" @click="handleExport" class="export-button">导出</el-button>
     <!--表格区域-->
-    <el-table :data="pagedRoles" style="width: 100%" @selection-change="handleSelectionChange">
+    <el-table :data="filteredRoles" style="width: 100%" @selection-change="handleSelectionChange">
       <el-table-column type="selection"></el-table-column>
-      <el-table-column prop="roleId" label="角色编号"></el-table-column>
+      <el-table-column label="序号" >
+        <template scope="scope">
+          <span>{{(currentPage-1)*pageSize+(scope.$index + 1)}} </span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="id" label="角色编号" v-if="false"></el-table-column>
       <el-table-column prop="roleName" label="角色名称"></el-table-column>
       <el-table-column prop="permission" label="权限字符"></el-table-column>
       <el-table-column prop="status" label="状态">
@@ -81,7 +86,7 @@
         :current-page="currentPage"
         :page-sizes="[10, 20, 50]"
         :page-size="pageSize"
-        :total="filteredRoles.length"
+        :total="total"
         layout="total, sizes, prev, pager, next, jumper"
     ></el-pagination>
     <!--表单区域-->
@@ -94,13 +99,9 @@
           <el-input v-model="form.permission"></el-input>
         </el-form-item>
         <el-form-item label="状态" prop="status">
-          <el-select v-if="this.dialogFlag === 'save'" v-model="form.status" placeholder="请选择">
+          <el-select v-model="form.status" placeholder="请选择">
             <el-option label="启用" value="1"></el-option>
             <el-option label="禁用" value="0"></el-option>
-          </el-select>
-          <el-select v-if="this.dialogFlag === 'edit'" v-model="form.status" placeholder="请选择">
-            <el-option label="启用" :value="1"></el-option>
-            <el-option label="禁用" :value="0"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="业务系统" prop="businesses">
@@ -128,92 +129,7 @@ import axios from "axios";
 export default {
   data() {
     return {
-      filteredRoles: [
-        {
-          roleId: 1, roleName: '管理员', permission: 'admin', status: 1, createTime: '2023-01-01', remark: '正常使用',
-          businesses: [
-            {businessId: 1, businessName: '推送系统', createTime: '2023-01-01'},
-            {businessId: 2, businessName: '电商系统', createTime: '2023-01-01'}
-          ]
-        },
-        {
-          roleId: 2, roleName: '普通用户', permission: 'user', status: 0, createTime: '2023-01-02', remark: '下月停机',
-          businesses: [
-            {businessId: 1, businessName: '推送系统', createTime: '2023-01-01'},
-          ]
-        },
-        {
-          roleId: 3, roleName: '普通用户', permission: 'user', status: 0, createTime: '2023-01-02', remark: '下月停机',
-          businesses: [
-            {businessId: 1, businessName: '推送系统', createTime: '2023-01-01'},
-            {businessId: 2, businessName: '电商系统', createTime: '2023-01-01'}
-          ]
-        },
-        {
-          roleId: 4, roleName: '普通用户', permission: 'user', status: 0, createTime: '2023-01-02', remark: '下月停机',
-          businesses: [
-            {businessId: 1, businessName: '推送系统', createTime: '2023-01-01'},
-            {businessId: 2, businessName: '电商系统', createTime: '2023-01-01'}
-          ]
-        },
-        {
-          roleId: 5, roleName: '普通用户', permission: 'user', status: 0, createTime: '2023-01-02', remark: '下月停机',
-          businesses: [
-            {businessId: 1, businessName: '推送系统', createTime: '2023-01-01'},
-            {businessId: 2, businessName: '电商系统', createTime: '2023-01-01'}
-          ]
-        },{
-          roleId: 6, roleName: '普通用户', permission: 'user', status: 0, createTime: '2023-01-02', remark: '下月停机',
-          businesses: [
-            {businessId: 1, businessName: '推送系统', createTime: '2023-01-01'},
-            {businessId: 2, businessName: '电商系统', createTime: '2023-01-01'}
-          ]
-        },
-        {
-          roleId: 7, roleName: '普通用户', permission: 'user', status: 0, createTime: '2023-01-02', remark: '下月停机',
-          businesses: [
-            {businessId: 1, businessName: '推送系统', createTime: '2023-01-01'},
-            {businessId: 2, businessName: '电商系统', createTime: '2023-01-01'}
-          ]
-        },
-        {
-          roleId: 8, roleName: '普通用户', permission: 'user', status: 0, createTime: '2023-01-02', remark: '下月停机',
-          businesses: [
-            {businessId: 1, businessName: '推送系统', createTime: '2023-01-01'},
-            {businessId: 2, businessName: '电商系统', createTime: '2023-01-01'}
-          ]
-        },
-        {
-          roleId: 9, roleName: '普通用户', permission: 'user', status: 0, createTime: '2023-01-02', remark: '下月停机',
-          businesses: [
-            {businessId: 1, businessName: '推送系统', createTime: '2023-01-01'},
-            {businessId: 2, businessName: '电商系统', createTime: '2023-01-01'}
-          ]
-        },
-        {
-          roleId: 10, roleName: '普通用户', permission: 'user', status: 0, createTime: '2023-01-02', remark: '下月停机',
-          businesses: [
-            {businessId: 1, businessName: '推送系统', createTime: '2023-01-01'},
-            {businessId: 2, businessName: '电商系统', createTime: '2023-01-01'}
-          ]
-        },
-        {
-          roleId: 11, roleName: '普通用户', permission: 'user', status: 0, createTime: '2023-01-02', remark: '下月停机',
-          businesses: [
-            {businessId: 1, businessName: '推送系统', createTime: '2023-01-01'},
-            {businessId: 2, businessName: '电商系统', createTime: '2023-01-01'}
-          ]
-        },
-        {
-          roleId: 12, roleName: '普通用户', permission: 'user', status: 0, createTime: '2023-01-02', remark: '下月停机',
-          businesses: [
-            {businessId: 1, businessName: '推送系统', createTime: '2023-01-01'},
-            {businessId: 2, businessName: '电商系统', createTime: '2023-01-01'}
-          ]
-        },
-
-        // 其他角色数据...
-      ],
+      filteredRoles: [],
       searchForm: {
         roleName: '',
         permission: '',
@@ -230,7 +146,7 @@ export default {
       dialogFlag: '',
       dialogTitle: '',
       form: {
-        roleId: 0,
+        id: 0,
         roleName: '',
         permission: '',
         status: '1', // 默认设置为启用状态
@@ -246,36 +162,28 @@ export default {
       },
       currentPage: 1, // 当前页码
       pageSize: 10, // 每页显示数量
+      total: 0, // 查询到的角色数量
       selectedBusinesses: [], // 选择的业务系统
       urls: {
         insert: "/role/insert",
         delete: "/role/delete",
-        batchDelete: "/role/batch-deletion",
+        batchDelete: "/role/batch_deletion",
         update: "/role/update",
-        list: "/role/list",
-        conditionalQuery: "/role/conditional-query",
+        pagingQuery: "/role/paging_query",
         export: "/export",
-        changeStatus: "/role/change-status",
+        changeStatus: "/role/change_status",
         businessList: "/business/list"
       }
     };
   },
-  computed: {
-    // 计算分页后的角色数据
-    pagedRoles() {
-      const startIndex = (this.currentPage - 1) * this.pageSize;
-      const endIndex = startIndex + this.pageSize;
-      return this.filteredRoles.slice(startIndex, endIndex);
-    },
-  },
   created:function () {
     // 初始化，配合后盾测试时打开
-    this.roleList();
-    this.businessList();
+    this.pagingQuery();
+    // this.businessList();
 
   },
   methods: {
-    // 无条件查询
+    // 业务系统列表
     businessList() {
       axios({
         method: "get",
@@ -287,10 +195,12 @@ export default {
     // 翻页
     handlePageChange(currentPage) {
       this.currentPage = currentPage;
+      this.pagingQuery();
     },
     // 修改页面大小
     handlePageSizeChange(pageSize) {
       this.pageSize = pageSize;
+      this.pagingQuery();
     },
     // 添加窗口
     handleCreate() {
@@ -299,7 +209,7 @@ export default {
       this.dialogTitle = '添加角色';
       // 清空表单数据
       this.form = {
-        roleId: 0,
+        id: 0,
         roleName: '',
         permission: '',
         status: '1',
@@ -316,7 +226,7 @@ export default {
       this.dialogTitle = '编辑角色';
       // 设置表单数据
       this.form = {
-        roleId: row.roleId,
+        id: row.id,
         roleName: row.roleName,
         permission: row.permission,
         status: row.status,
@@ -334,7 +244,7 @@ export default {
         cancelButtonText: '取消',
         type: 'warning',
       }).then(() => {
-        this.delete(row)
+        this.bantchDelete(row)
       }).catch(() => {
         // 用户点击取消按钮
         this.$message.info('操作取消');
@@ -349,7 +259,7 @@ export default {
           cancelButtonText: '取消',
           type: 'warning',
         }).then(() => {
-          this.bantchDelete()
+          this.bantchDelete(this.selectedRoles)
         }).catch(() => {
           // 用户点击取消按钮
           this.$message.info('操作取消');
@@ -357,31 +267,19 @@ export default {
       }
     },
     // 批量删除
-    bantchDelete() {
+    bantchDelete(row) {
+      if (row !== null){
+        this.selectedRoles.push(row.id)
+      }
       axios({
         method: "post",
         data: this.selectedRoles,
         url: this.urls.batchDelete
       }).then((res) => {
-        if (res.data.code === 200){
+        if (res.data.status === 0){
           this.$message.success('删除成功');
-        }else{
-          this.$message.error('删除失败');
-        }
-      })
-    },
-    // 删除
-    delete(row) {
-      let data = {
-        "id": row.roleId
-      }
-      axios({
-        method: "post",
-        data: data,
-        url: this.urls.delete
-      }).then((res) => {
-        if (res.data.code === 200){
-          this.$message.success('删除成功');
+          this.selectedRoles = [];
+          this.pagingQuery();
         }else{
           this.$message.error('删除失败');
         }
@@ -389,41 +287,10 @@ export default {
     },
     // 搜索按钮
     handleSearch() {
-      if (this.searchForm.roleName !== "") {
-        this.conditionalQuery();
-        return;
-      }
-      if (this.searchForm.permission !== "") {
-        this.conditionalQuery();
-        return;
-      }
-      if (this.searchForm.status !== "") {
-        this.conditionalQuery();
-        return;
-      }
-      if (this.searchForm.createTime !== "") {
-        this.conditionalQuery();
-        return;
-      }
-      this.roleList();
-    },
-    // 无条件查询
-    roleList() {
-      let data = {
-        pageIndex: this.currentPage,
-        pageSize: this.pageSize
-      }
-      axios({
-        method: "post",
-        data: data,
-        url: this.urls.list
-      }).then((res) => {
-        this.filteredRoles = res.data.data;
-        this.totalRoles = res.data.data.count;
-      })
+      this.pagingQuery();
     },
     // 条件查询
-    conditionalQuery() {
+    pagingQuery() {
       let data = {
         pageIndex: this.currentPage,
         pageSize: this.pageSize,
@@ -436,11 +303,13 @@ export default {
       axios({
         method: "post",
         data: data,
-        url: this.urls.list
+        url: this.urls.pagingQuery
       }).then((res) => {
-        this.filteredRoles = res.data.data;
-        this.totalRoles = res.data.data.count;
-      })
+        this.filteredRoles = res.data.data.list;
+        this.total = parseInt(res.data.data.total);
+      }).catch(() => {
+        this.$message.error('查询出错');
+      });
     },
     // 重置搜索框
     handleReset() {
@@ -453,21 +322,17 @@ export default {
       };
       this.handleSearch();
     },
+    // 处理多选
     handleSelectionChange(selection) {
-      this.selectedRoles = selection.map((item) => item.roleId)
+      this.selectedRoles = selection.map((item) => item.id)
     },
     // 修改状态
     handleSwitchChange(row) {
-      let data = {
-        "id": row.roleId,
-        "status": row.status
-      }
       axios({
-        method: "post",
-        data: data,
-        url: this.urls.changeStatus
+        method: "get",
+        url: this.urls.changeStatus+"?id="+row.id+"&status="+row.status
       }).then((res) => {
-        if (res.data.code === 200){
+        if (res.data.success === true){
           this.$message.success('修改成功');
         }else{
           this.$message.error('修改失败');
@@ -495,7 +360,7 @@ export default {
         if (valid) {
           // 构造角色对象
           const role = {
-            roleId: this.form.roleId,
+            id: this.form.id,
             roleName: this.form.roleName,
             permission: this.form.permission,
             status: this.form.status,
@@ -503,29 +368,30 @@ export default {
             remark: this.form.remark,
           };
           // 添加
-          if (this.form.roleId === 0){
+          if (this.dialogFlag === 'save'){
             axios({
               method: "post",
               data: role,
               url: this.urls.insert
             }).then((res) => {
-              if (res.data.code === 200){
+              if (res.data.status === 0){
                 this.$message.success('添加成功');
                 // 保存成功后关闭对话框
                 this.dialogVisible = false;
+                this.pagingQuery();
               }else{
                 this.$message.error('添加失败');
               }
             })
           }
           // 修改
-          if (this.form.roleId !== 0){
+          if (this.dialogFlag === 'edit'){
             axios({
               method: "post",
               data: role,
               url: this.urls.update
             }).then((res) => {
-              if (res.data.code === 200){
+              if (res.data.status === 0){
                 this.$message.success('修改成功');
                 // 保存成功后关闭对话框
                 this.dialogVisible = false;
@@ -552,7 +418,7 @@ export default {
   align-items: center;
 }
 
-.search-form .el-form-item {
+.search-form{
   margin-right: 20px;
 }
 
