@@ -54,7 +54,7 @@
     <!--按钮区域-->
     <el-button type="primary" @click="handleCreate">创建角色</el-button>
     <el-button type="danger" @click="handleDeleteSelected" :disabled="selectedRoles.length === 0">删除选中</el-button>
-    <el-button type="primary" @click="handleExport" class="export-button">导出</el-button>
+    <el-button type="primary" @click="handleExport" class="export-button" :disabled="selectedRoles.length === 0">导出选中</el-button>
     <!--表格区域-->
     <el-table :data="filteredRoles" style="width: 100%" @selection-change="handleSelectionChange">
       <el-table-column type="selection"></el-table-column>
