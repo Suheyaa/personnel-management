@@ -175,7 +175,7 @@ export default {
         batchDelete: "/role/batch_deletion",
         update: "/role/update",
         pagingQuery: "/role/paging_query",
-        export: "/export",
+        export: "/role/export",
         changeStatus: "/role/change_status",
         businessList: "/business/list_all"
       }
@@ -352,15 +352,20 @@ export default {
     handleExport() {
       axios({
         method: "post",
-        data: this.filteredRoles,
-        url: this.urls.export
-      }).then((res) => {
-        if (res.data.code === 200){
-          this.$message.success('导出成功');
-        }else{
-          this.$message.error('导出失败');
-        }
-      })
+        data: this.selectedRoles,
+        url: this.urls.export,
+        responseType: "blob"
+      }).then((res) => { // 接口
+        const blob = new Blob([res.data]);
+        const a = document.createElement("a");
+        const href = window.URL.createObjectURL(blob);
+        a.href = href;
+        a.download = '角色表权限.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(href);
+      }).catch((error) => {});
     },
     // 添加或修改
     handleSave() {
