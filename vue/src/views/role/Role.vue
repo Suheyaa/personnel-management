@@ -33,6 +33,7 @@
           <el-form-item label="创建时间">
             <el-date-picker
                 v-model="searchForm.createTime"
+                value-format="yyyy-MM-dd hh:mm:ss"
                 type="daterange"
                 range-separator="至"
                 start-placeholder="开始日期"
@@ -99,14 +100,18 @@
           <el-input v-model="form.permission"></el-input>
         </el-form-item>
         <el-form-item label="状态" prop="status">
-          <el-select v-model="form.status" placeholder="请选择">
+          <el-select v-if="this.dialogFlag === 'save'" v-model="form.status" placeholder="请选择">
             <el-option label="启用" value="1"></el-option>
             <el-option label="禁用" value="0"></el-option>
+          </el-select>
+          <el-select v-if="this.dialogFlag === 'edit'" v-model="form.status" placeholder="请选择">
+            <el-option label="启用" :value="1"></el-option>
+            <el-option label="禁用" :value="0"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="业务系统" prop="businesses">
           <el-select v-model="form.businesses" multiple placeholder="请选择业务系统">
-            <el-option v-for="business in businesses" :key="business.businessId" :label="business.businessName" :value="business.businessId"></el-option>
+            <el-option v-for="business in businesses" :key="business.id" :label="business.businessName" :value="business.id"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="备注" prop="remark">
@@ -138,8 +143,8 @@ export default {
       },
       selectedRoles: [],
       businesses: [
-        {businessId: 1, businessName: '推送系统', createTime: '2023-01-01'},
-        {businessId: 2, businessName: '电商系统', createTime: '2023-01-01'},
+        {id: 1, businessName: '推送系统'},
+        {id: 2, businessName: '电商系统'},
       ],
       businessIds:[],
       dialogVisible: false,
@@ -172,14 +177,14 @@ export default {
         pagingQuery: "/role/paging_query",
         export: "/export",
         changeStatus: "/role/change_status",
-        businessList: "/business/list"
+        businessList: "/business/list_all"
       }
     };
   },
   created:function () {
     // 初始化，配合后盾测试时打开
     this.pagingQuery();
-    // this.businessList();
+    this.businessList();
 
   },
   methods: {
@@ -190,6 +195,7 @@ export default {
         url: this.urls.businessList
       }).then((res) => {
         this.businesses = res.data.data
+        console.log(this.businesses)
       })
     },
     // 翻页
@@ -221,6 +227,7 @@ export default {
     },
     // 编辑窗口
     handleEdit(row) {
+      console.log(row)
       this.dialogVisible = true;
       this.dialogFlag = 'edit';
       this.dialogTitle = '编辑角色';
@@ -232,7 +239,7 @@ export default {
         status: row.status,
         createTime: row.createTime,
         remark: row.remark,
-        businesses: row.businesses.map((business) => business.businessId),
+        businesses: row.ids,
       };
       this.selectedBusinesses = this.form.businesses;
     },
@@ -305,8 +312,10 @@ export default {
         data: data,
         url: this.urls.pagingQuery
       }).then((res) => {
+        console.log(res)
         this.filteredRoles = res.data.data.list;
         this.total = parseInt(res.data.data.total);
+        console.log(this.filteredRoles)
       }).catch(() => {
         this.$message.error('查询出错');
       });
@@ -367,6 +376,7 @@ export default {
             ids: this.form.businesses,
             remark: this.form.remark,
           };
+          console.log(role)
           // 添加
           if (this.dialogFlag === 'save'){
             axios({
