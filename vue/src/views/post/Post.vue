@@ -1,338 +1,391 @@
-<!--用户界面：查、删-->
 <template>
-  <div>
-    <!--    搜索表单-->
-    <div style="margin-bottom: 20px">
-      <el-input style="width: 240px" placeholder="请输入岗位编码" v-model="params.post_code"></el-input>
-      <el-input style="width: 240px; margin-left: 5px" placeholder="请输入岗位名称" v-model="params.post_name"></el-input>
-      <el-input style="width: 240px; margin-left: 5px" placeholder="请输入岗位状态" v-model="params.status"></el-input>
+  <div class="app-container">
+    <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="68px">
+      <el-form-item label="岗位编码" prop="postCode">
+        <el-input
+            v-model="queryParams.postCode"
+            placeholder="请输入岗位编码"
+            clearable
+            @keyup.enter.native="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="岗位名称" prop="postName">
+        <el-input
+            v-model="queryParams.postName"
+            placeholder="请输入岗位名称"
+            clearable
+            @keyup.enter.native="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="状态" prop="status">
+        <el-select v-model="queryParams.status" placeholder="岗位状态" clearable>
+<!--          <el-option-->
+<!--              v-for="dict in dict.type.sys_normal_disable"-->
+<!--              :key="dict.value"-->
+<!--              :label="dict.label"-->
+<!--              :value="dict.value"-->
+<!--          />-->
+        </el-select>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
+        <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
+      </el-form-item>
+    </el-form>
 
-      <el-button style="margin-left: 10px" type="primary" @click="load" ><i class="el-icon-search"></i> 搜索</el-button>
-      <el-button style="margin-left: 10px" type="warning" @click="reset" ><i class="el-icon-refresh"></i> 重置</el-button>
-    </div>
+    <el-row :gutter="10" class="mb8">
+      <el-col :span="1.5">
+        <el-button
+            type="primary"
+            plain
+            icon="el-icon-plus"
+            size="mini"
+            @click="handleAdd"
+            v-hasPermi="['system:post:add']"
+        >新增</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button
+            type="success"
+            plain
+            icon="el-icon-edit"
+            size="mini"
+            :disabled="single"
+            @click="handleUpdate"
+            v-hasPermi="['system:post:edit']"
+        >修改</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button
+            type="danger"
+            plain
+            icon="el-icon-delete"
+            size="mini"
+            :disabled="multiple"
+            @click="handleDelete"
+            v-hasPermi="['system:post:remove']"
+        >删除</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button
+            type="warning"
+            plain
+            icon="el-icon-download"
+            size="mini"
+            @click="handleExport"
+            v-hasPermi="['system:post:export']"
+        >导出</el-button>
+      </el-col>
+      <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
+    </el-row>
 
-    <div style="margin-bottom: 10px">
-      <el-button type="primary" @click="add"  ><i class="el-icon-plus"></i>  添加 </el-button>
-      <el-button style="margin-left: 10px" type="info"  ><i class="el-icon-edit"></i>  修改 </el-button>
-      <el-button style="margin-left: 10px" type="danger"   ><i class="el-icon-delete"></i>  删除 </el-button>
-      <el-button style="margin-left: 10px" type="warning"   ><i class="el-icon-download"></i>  导出 </el-button>
-    </div>
-
-    <el-table :data="tableData" stripe border >
-      <el-table-column prop="id" label="岗位编号" ></el-table-column>
-      <el-table-column prop="post_code" label="岗位编码" ></el-table-column>
-      <el-table-column prop="post_name" label="岗位名称"></el-table-column>
-      <el-table-column prop="status" label="岗位状态"></el-table-column>
-
-
-
-      <el-table-column prop="create_time" label="创建时间" ></el-table-column>
-      <el-table-column prop="update_time" label="更新时间"  ></el-table-column>
-
-
-
-
-
-      <el-table-column label="操作"  width="300" fixed="right" ><!--fixed="right"：固定在右侧-->
-        <template v-slot="scope">
-          <!--编辑按钮-->
-          <el-button type="primary" @click="updateUser(scope.row)"  icon="el-icon-edit" round   style="margin-left: 10px"></el-button>
-          <!--删除按钮-->
-          <el-popconfirm
-              style="margin-left: 10px"
-              title="您确定删除这行数据吗？"
-              @confirm="del(scope.row.id)"
-          >
-            <el-button type="danger" slot="reference"  icon="el-icon-delete" round  ></el-button>
-          </el-popconfirm>
-
+    <el-table v-loading="loading" :data="postList" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="55" align="center" />
+      <el-table-column label="岗位编号" align="center" prop="postId" />
+      <el-table-column label="岗位编码" align="center" prop="postCode" />
+      <el-table-column label="岗位名称" align="center" prop="postName" />
+      <el-table-column label="岗位排序" align="center" prop="postSort" />
+      <el-table-column label="状态" align="center" prop="status">
+        <template slot-scope="scope">
+<!--          <dict-tag :options="dict.type.sys_normal_disable" :value="scope.row.status"/>-->
+        </template>
+      </el-table-column>
+      <el-table-column label="创建时间" align="center" prop="createTime" width="180">
+        <template slot-scope="scope">
+          <span>{{ parseTime(scope.row.createTime) }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
+        <template slot-scope="scope">
+          <el-button
+              size="mini"
+              type="text"
+              icon="el-icon-edit"
+              @click="handleUpdate(scope.row)"
+              v-hasPermi="['system:post:edit']"
+          >修改</el-button>
+          <el-button
+              size="mini"
+              type="text"
+              icon="el-icon-delete"
+              @click="handleDelete(scope.row)"
+              v-hasPermi="['system:post:remove']"
+          >删除</el-button>
         </template>
       </el-table-column>
     </el-table>
 
-    <!--分页-->
-    <div style="margin-top: 20px">
-      <el-pagination
-          background
-          :current-page="params.pageNum"
-          :page-size="params.pageSize"
-          layout="prev, pager, next"
-          @current-change="handleCurrentChange"
-          :total="total">
-      </el-pagination>
-    </div>
+    <pagination
+        v-show="total>0"
+        :total="total"
+        :page.sync="queryParams.pageNum"
+        :limit.sync="queryParams.pageSize"
+        @pagination="getList"
+    />
 
-
-    <!--添加用户按钮弹框：1-->
-    <el-dialog title="添加用户" :visible.sync="dialogFormVisible1" width="30%"><!--dialogFormVisible1：控制这个弹框的显示-->
-      <!--ruleForm1用于 修改弹框的表单验证，规则绑定的是 rules-->
-      <el-form :model="form" label-width="100px" ref="ruleForm1" :rules="rules" style="width: 85%">
-        <el-form-item label="岗位编码" prop="post_code">
-          <el-input v-model="form.username" placeholder="请输入岗位名称"></el-input>
+    <!-- 添加或修改岗位对话框 -->
+    <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
+      <el-form ref="form" :model="form" :rules="rules" label-width="80px">
+        <el-form-item label="岗位名称" prop="postName">
+          <el-input v-model="form.postName" placeholder="请输入岗位名称" />
         </el-form-item>
-        <el-form-item label="岗位名称" prop="post_name">
-          <el-input v-model="form.name" placeholder="请输入岗位名称"></el-input>
+        <el-form-item label="岗位编码" prop="postCode">
+          <el-input v-model="form.postCode" placeholder="请输入编码名称" />
         </el-form-item>
-
-        <el-form-item label="岗位状态">
-          <el-radio v-model="form.sex"  label="男">正常</el-radio>
-          <el-radio v-model="form.sex"  label="女">停用</el-radio>
-        </el-form-item>
-        <el-form-item label="备注" prop="phone">
-          <el-input v-model="form.phone" placeholder="请输入备注"></el-input>
-        </el-form-item>
-
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button @click="dialogFormVisible1 = false">取 消</el-button>
-        <el-button type="primary" @click="submit1">确 定</el-button>
-      </div>
-    </el-dialog>
-
-    <!--修改按钮弹框：2-->
-    <el-dialog title="修改部门" :visible.sync="dialogFormVisible2" width="30%">
-      <!--ruleForm2用于 修改弹框的表单验证，规则绑定的是 rules-->
-      <el-form  :model="form" ref="ruleForm2" :rules="rules" label-width="100px"  style="width: 85%">
-        <el-form-item label="岗位编码" prop="post_code">
-          <el-input v-model="form.post_code" placeholder="请输入岗位编码"></el-input>
-        </el-form-item>
-        <el-form-item label="岗位名称" prop="post_name">
-          <el-input v-model="form.post_name" placeholder="请输入岗位名称"></el-input>
+        <el-form-item label="岗位顺序" prop="postSort">
+          <el-input-number v-model="form.postSort" controls-position="right" :min="0" />
         </el-form-item>
         <el-form-item label="岗位状态" prop="status">
-          <el-radio v-model="form.status"  label="可用">可用</el-radio>
-          <el-radio v-model="form.status"  label="不可用">不可用</el-radio>
+          <el-radio-group v-model="form.status">
+<!--            <el-radio-->
+<!--                v-for="dict in dict.type.sys_normal_disable"-->
+<!--                :key="dict.value"-->
+<!--                :label="dict.value"-->
+<!--            >{{dict.label}}</el-radio>-->
+          </el-radio-group>
         </el-form-item>
-
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="form.remark" type="textarea" placeholder="请输入内容" />
+        </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
-        <el-button @click="dialogFormVisible2 = false">取 消</el-button>
-        <el-button type="primary" @click="submit2">确 定</el-button>
+        <el-button type="primary" @click="submitForm">确 定</el-button>
+        <el-button @click="cancel">取 消</el-button>
       </div>
     </el-dialog>
-
-
-
-
   </div>
 </template>
 
 <script>
-
+// import { listPost, getPost, delPost, addPost, updatePost } from "@/api/system/post";
 
 export default {
-  name: 'Post',
+  name: "Post",
+  // dicts: ['sys_normal_disable'],
   data() {
-    //自定义表单验证方法：检查age
-    const checkAge = (rule, value, callback) => {
-      if (!value) {
-        return callback(new Error('年龄不能为空'));
-      }
-      if (!/^[0-9]+$/.test(value)) {//正则表达式
-        callback(new Error('请输入数字值'));
-      }
-      if (parseInt(value) > 120 || parseInt(value) <= 0) {
-        callback(new Error('请输入合理的年龄'));
-      }
-      callback()
-    };
-    //自定义表单验证方法：检查phone
-    const checkPhone = (rule, value, callback) => {
-      if (!/^[1][3,4,5,6,7,8,9][0-9]{9}$/.test(value)) {//正则表达式
-        callback(new Error('请输入合法的手机号'));
-      }
-      callback()
-    };
-    //自定义表单验证方法：检查nums
-    const checkNums = (rule, value, callback) => {
-      value = parseInt(value)
-      if (value < 10 || value > 200) {
-        callback(new Error('请输入大于等于10小于或等于200的整数'));
-      }
-      callback()
-    };
     return {
-      tableData: [//页面数据显示
-
-        {
-          id: '1',
-          post_code: 'ceo',
-          post_name: '董事长',
-          status: '1',
-          create_time:'2023-07-03 20:47:47',
-          update_time:'2023-07-03 20:47:47',
-        }, {
-          id: '1',
-          post_code: 'ceo',
-          post_name: '董事长',
-          status: '1',
-          create_time:'2023-07-03 20:47:47',
-          update_time:'2023-07-03 20:47:47',
-        }, {
-          id: '1',
-          post_code: 'ceo',
-          post_name: '董事长',
-          status: '1',
-          create_time:'2023-07-03 20:47:47',
-          update_time:'2023-07-03 20:47:47',
-        }, {
-          id: '1',
-          post_code: 'ceo',
-          post_name: '董事长',
-          status: '1',
-          create_time:'2023-07-03 20:47:47',
-          update_time:'2023-07-03 20:47:47',
-        }
-
-
-      ],
+      // 遮罩层
+      loading: false,
+      // 选中数组
+      ids: [],
+      // 非单个禁用
+      single: true,
+      // 非多个禁用
+      multiple: true,
+      // 显示搜索条件
+      showSearch: true,
+      // 总条数
       total: 0,
-      params: {
-        //分页
+      // 岗位表格数据
+      postList: [
+        {
+          postId: "测试数据",
+          postCode: "测试数据",
+          postName: "测试数据",
+          postSort: 0,
+          status: "0",
+          remark: "测试数据"
+        },
+        {
+          postId: "测试数据",
+          postCode: "测试数据",
+          postName: "测试数据",
+          postSort: 0,
+          status: "0",
+          remark: "测试数据"
+        },
+      ],
+      // 弹出层标题
+      title: "",
+      // 是否显示弹出层
+      open: false,
+      // 查询参数
+      queryParams: {
         pageNum: 1,
         pageSize: 10,
-        name: '',
-        phone: ''
+        postCode: undefined,
+        postName: undefined,
+        status: undefined
       },
-      //1是添加用户弹框，2是修改用户按钮弹框，3是充值弹框,4是借书
-      dialogFormVisible1: false,
-      dialogFormVisible2: false,
-      dialogFormVisible3: false,
-      form: {},
-      rules: {//表单验证规则，下面的规则 与form表单中的 prop 的值绑定
-        score: [
-          { required: true, message: '请输入积分', trigger: 'blur'},
-          { validator: checkNums, trigger: 'blur'}
+      // 表单参数
+      form: {
+
+      },
+      // 表单校验
+      rules: {
+        postName: [
+          { required: true, message: "岗位名称不能为空", trigger: "blur" }
         ],
-        name: [
-          { required: true, message: '请输入姓名', trigger: 'blur'}
+        postCode: [
+          { required: true, message: "岗位编码不能为空", trigger: "blur" }
         ],
-        age: [
-          { validator: checkAge, trigger: 'blur' }
-        ],
-        phone: [
-          { validator: checkPhone, trigger: 'blur' }
+        postSort: [
+          { required: true, message: "岗位顺序不能为空", trigger: "blur" }
         ]
       }
-    }
+    };
   },
-  created() {//在页面加载时就调用 分页查询的方法
-    this.load()
+  created() {
+    this.getList();
   },
   methods: {
-    //修改用户状态 的开关 方法
-    changeStatus(row) {//直接将 row的所有内容传输过去，因为我们只修改了一个状态，其他都没变，所以还是可以调用用户修改的借口
-      // request.put('/user/update', row).then(res => {
-      //   if (res.code === '200') {//如果后端传来 200 则表示成功
-      //     this.$notify.success('操作成功')
-      //     this.load()
-      //   } else {
-      //     this.$notify.error(res.msg)
-      //   }
-      // })
+    /** 查询岗位列表 */
+    getList() {
+      // this.loading = true;
+      // listPost(this.queryParams).then(response => {
+      //   this.postList = response.rows;
+      //   this.total = response.total;
+      //   this.loading = false;
+      // });
     },
-    //分页查询方法
-    load() {
-
-      // fetch('http://localhost:9090/user/list').then(res => res.json()).then(res => {
-      //   console.log(res)
-      //   this.tableData = res
-      // })
-
-
-      // request.get('/user/page', {
-      //   params: this.params//params：传过去的参数
-      // }).then(res => {
-      //   if (res.code === '200') {//如果后端传来 200 则表示成功
-      //     this.tableData = res.data.list
-      //     this.total = res.data.total
-      //   }
-      // })
+    // 取消按钮
+    cancel() {
+      this.open = false;
+      this.reset();
     },
-    //重置搜索按钮 的方法
-    reset() {//将name 和 phone 内容清空，重新加载页面
-      this.params = {
+    // 表单重置
+    reset() {
+      this.form = {
+        postId: undefined,
+        postCode: undefined,
+        postName: undefined,
+        postSort: 0,
+        status: "0",
+        remark: undefined
+      };
+      //重置搜索框
+      // this.queryParams = {
+      //     pageNum: 1,
+      //     pageSize: 10,
+      //     postCode: undefined,
+      //     postName: undefined,
+      //     status: undefined
+      // }
+      // this.resetForm("form");
+    },
+    /** 搜索按钮操作 */
+    handleQuery() {
+      // this.queryParams.pageNum = 1;
+      // this.getList();
+    },
+    /** 重置按钮操作 */
+    resetQuery() {
+      //重置搜索框
+      this.queryParams = {
         pageNum: 1,
         pageSize: 10,
-        name: '',
-        phone: ''
+        postCode: undefined,
+        postName: undefined,
+        status: undefined
       }
-      this.load()
+      // this.handleQuery();
     },
-    //添加用户按钮 的方法
-    add() {
-      this.dialogFormVisible1 = true//让添加弹框显示
-      this.form = {sex: '男',account: '0'}//清空form中存储的用于修改按钮回显的数据，防止添加新用户时出现修改时回显的数据
-      // 让account 默认为0，添加的用户账户就是0积分
+    // 多选框选中数据
+    handleSelectionChange(selection) {
+      // this.ids = selection.map(item => item.postId)
+      // this.single = selection.length!=1
+      // this.multiple = !selection.length
     },
-    //修改用户按钮 的方法
-    updateUser(row){//row就是表格那一行的数据，用row做到数据回显
-      this.dialogFormVisible2 = true
-      this.form = row
+    /** 新增按钮操作 */
+    handleAdd() {
+      this.reset();
+      this.open = true;
+      this.title = "添加岗位";
     },
-    //删除用户按钮 的方法
-    del(id) {
-      // request.delete("/user/delete/" + id).then(res => {
-      //   if (res.code === '200') {//如果后端数据 发来200 表明成功
-      //     this.$notify.success('删除成功')
-      //     this.load()
-      //   } else {
-      //     this.$notify.error(res.msg)
+    /** 修改按钮操作 */
+    handleUpdate(row) {
+      this.reset();
+      // const postId = row.postId || this.ids
+      // getPost(postId).then(response => {
+      //   this.form = response.data;
+        this.form = {
+          postId: "测试数据",
+          postCode: "测试数据",
+          postName: "测试数据",
+          postSort: 0,
+          status: "0",
+          remark: "测试数据"
+        };
+        this.open = true;
+        this.title = "修改岗位";
+      // });
+    },
+    /** 提交按钮 */
+    submitForm: function() {
+      // this.$refs["form"].validate(valid => {
+      //   if (valid) {
+      //     if (this.form.postId != undefined) {
+      //       updatePost(this.form).then(response => {
+      //         this.$modal.msgSuccess("修改成功");
+      //         this.open = false;
+      //         this.getList();
+      //       });
+      //     } else {
+      //       addPost(this.form).then(response => {
+      //         this.$modal.msgSuccess("新增成功");
+      //         this.open = false;
+      //         this.getList();
+      //       });
+      //     }
       //   }
-      // })
+      // });
     },
-
-
-    //添加用户 确认提交的方法
-    submit1() {
-      //ruleForm1：添加弹框的表单验证
-      // this.$refs['ruleForm1'].validate((valid) => {
-      //   if (valid) {//表单验证通过才能执行下面
-      //     request.post('/user/save', this.form).then(res => {
-      //       if (res.code === '200') {//如果后端数据 发来200 表明成功
-      //         this.$notify.success('新增成功')
-      //         this.$refs['ruleForm1'].resetFields()
-      //         this.dialogFormVisible1 = false
-      //         this.load()
-      //       } else {
-      //         this.$notify.error(res.msg)
-      //       }
-      //     })
-      //   }
-      // })
+    /** 删除按钮操作 */
+    handleDelete(row) {
+      // const postIds = row.postId || this.ids;
+      // this.$modal.confirm('是否确认删除岗位编号为"' + postIds + '"的数据项？').then(function() {
+      //   return delPost(postIds);
+      // }).then(() => {
+      //   this.getList();
+      //   this.$modal.msgSuccess("删除成功");
+      // }).catch(() => {});
     },
-    //修改用户 确认提交的方法
-    submit2() {
-      //ruleForm2：修改弹框的表单验证
-      // this.$refs['ruleForm2'].validate((valid) => {
-      //   if (valid) {//表单验证通过才能执行下面
-      //     request.put('/user/update', this.form).then(res => {
-      //       if (res.code === '200') {//如果后端数据 发来200 表明成功
-      //         this.$notify.success('更新成功')//提示信息
-      //         this.$refs['ruleForm2'].resetFields()
-      //         this.dialogFormVisible2 = false//让弹框消失
-      //         this.load()//重新加载页面
-      //       } else {
-      //         this.$notify.error(res.msg)
-      //       }
-      //     })
-      //   }
-      // })
+    /** 导出按钮操作 */
+    handleExport() {
+      // this.download('system/post/export', {
+      //   ...this.queryParams
+      // }, `post_${new Date().getTime()}.xlsx`)
     },
-
-
-
-    handleCurrentChange(pageNum) {
-      // 点击分页按钮触发分页
-      this.params.pageNum = pageNum
-      this.load()
+    //时间解析
+    parseTime(time, pattern) {
+      if (arguments.length === 0 || !time) {
+        return null
+      }
+      const format = pattern || '{y}-{m}-{d} {h}:{i}:{s}'
+      let date
+      if (typeof time === 'object') {
+        date = time
+      } else {
+        if ((typeof time === 'string') && (/^[0-9]+$/.test(time))) {
+          time = parseInt(time)
+        } else if (typeof time === 'string') {
+          time = time.replace(new RegExp(/-/gm), '/').replace('T', ' ').replace(new RegExp(/\.[\d]{3}/gm), '');
+        }
+        if ((typeof time === 'number') && (time.toString().length === 10)) {
+          time = time * 1000
+        }
+        date = new Date(time)
+      }
+      const formatObj = {
+        y: date.getFullYear(),
+        m: date.getMonth() + 1,
+        d: date.getDate(),
+        h: date.getHours(),
+        i: date.getMinutes(),
+        s: date.getSeconds(),
+        a: date.getDay()
+      }
+      const time_str = format.replace(/{(y|m|d|h|i|s|a)+}/g, (result, key) => {
+        let value = formatObj[key]
+        // Note: getDay() returns 0 on Sunday
+        if (key === 'a') { return ['日', '一', '二', '三', '四', '五', '六'][value] }
+        if (result.length > 0 && value < 10) {
+          value = '0' + value
+        }
+        return value || 0
+      })
+      return time_str
     },
-
-
   }
-}
+};
 </script>
-
-<style scoped>
-
-</style>
