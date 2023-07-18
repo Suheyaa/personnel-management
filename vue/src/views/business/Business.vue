@@ -105,8 +105,8 @@
                 <select-icon ref="iconSelect" @selected="selected" :active-icon="form.icon"/>
                 <el-input slot="reference" v-model="form.icon" placeholder="点击选择图标" readonly>
                   <template slot="prepend">
-                    <i v-if="form.icon" slot="prefix" :class="form.icon"/>
-                    <i v-else slot="prefix" class="el-icon-search"/>
+                    <i v-if="form.icon" :class="form.icon"/>
+                    <i v-else class="el-icon-search"/>
                   </template>
                 </el-input>
               </el-popover>
@@ -132,7 +132,7 @@
             <el-form-item prop="permission">
               <el-input v-model="form.permission" placeholder="请输入权限标识" maxlength="100" clearable/>
               <span slot="label">
-                <el-tooltip content="控制器中定义的权限字符，如：@PreAuthorize(`@ss.hasPermi('system:user:list')`)"
+                <el-tooltip content="控制器中定义的权限字符，如：@PreAuthorize(`@ss.hasPermit('system:user:list')`)"
                             placement="top">
                 <i class="el-icon-question"/>
                 </el-tooltip>
@@ -183,7 +183,6 @@ export default {
   },
   data() {
     return {
-      input: '',
       // 查询参数
       searchForm: {
         businessName: '',
@@ -207,9 +206,6 @@ export default {
       refreshTable: true,
       // 遮罩层
       loading: false,
-      // 显示搜索条件
-      showSearch: true,
-      id: undefined,
       menuList: [],
       refresh: false,
       // 弹出层标题
@@ -218,7 +214,6 @@ export default {
       open: false,
       // 表单参数
       form: {},
-      radio: '1',
       // 表单校验
       rules: {
         businessName: [
@@ -238,7 +233,7 @@ export default {
         select: "/business/selectById",
         insert: "/business/insert",
         update: "/business/update"
-      },
+      }
     }
   },
 
