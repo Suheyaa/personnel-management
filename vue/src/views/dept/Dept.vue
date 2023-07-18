@@ -62,9 +62,9 @@
       <el-table-column prop="deptName" label="部门名称" width="260"></el-table-column>
       <el-table-column prop="orderNum" label="排序" width="200"></el-table-column>
       <el-table-column prop="status" label="状态" width="100">
-<!--        <template slot-scope="scope">-->
+        <template slot-scope="scope">
 <!--          <dict-tag :options="dict.type.sys_normal_disable" :value="scope.row.status"/>-->
-<!--        </template>-->
+        </template>
       </el-table-column>
       <el-table-column label="创建时间" align="center" prop="createTime" width="200">
         <template slot-scope="scope">
@@ -167,7 +167,7 @@ import "@riophae/vue-treeselect/dist/vue-treeselect.css";
 
 export default {
   name: "Dept",
-  // dicts: ['sys_normal_disable'],
+  dicts: ['sys_normal_disable'],
   components: { Treeselect },
   data() {
     return {
@@ -192,16 +192,26 @@ export default {
       // 表格树数据
       deptList: [
         {
-          deptName:"测试数据",
-          orderNum:"测试数据",
-          status:"测试数据",
-          createTime:"测试数据",
+          deptId: "100",
+          parentId: "0",
+          ancestors:"0",
+          deptName: "若依科技",
+          orderNum: "0",
+          leader: "测试数据",
+          phone: "测试数据",
+          email: "测试数据",
+          status: "0"
         },
         {
-          deptName:"测试数据",
-          orderNum:"测试数据",
-          status:"测试数据",
-          createTime:"测试数据",
+          deptId: "101",
+          parentId: "100",
+          ancestors:"0,100",
+          deptName: "测试数据",
+          orderNum: "1",
+          leader: "测试数据",
+          phone: "测试数据",
+          email: "测试数据",
+          status: "0"
         },
 
       ],
@@ -329,11 +339,11 @@ export default {
     },
     /** 展开/折叠操作 */
     toggleExpandAll() {
-      // this.refreshTable = false;
-      // this.isExpandAll = !this.isExpandAll;
-      // this.$nextTick(() => {
-      //   this.refreshTable = true;
-      // });
+      this.refreshTable = false;
+      this.isExpandAll = !this.isExpandAll;
+      this.$nextTick(() => {
+        this.refreshTable = true;
+      });
     },
 
     /** 修改按钮操作 */
@@ -401,6 +411,33 @@ export default {
     },
     /** 删除按钮操作 */
     handleDelete(row) {
+
+      this.$confirm('是否删除选中的所有部门？删除后无法恢复!', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+
+        this.$message({
+          type: 'success',
+          message: '删除成功!'
+        });
+        // let res = this.delPost(userIds);
+        //
+        // if(res.data.code===222){
+        //   this.getList();
+        //   this.$message({
+        //     type: 'success',
+        //     message: '删除成功!'
+        //   });
+        // }else{
+        //   this.$message({
+        //     type: 'error',
+        //     message: res.data.message
+        //   });
+        // }
+      }).catch(() => {});
+
       // this.$modal.confirm('是否确认删除名称为"' + row.deptName + '"的数据项？').then(function() {
       //   return delDept(row.deptId);
       // }).then(() => {

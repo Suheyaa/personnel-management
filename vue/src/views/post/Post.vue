@@ -45,15 +45,15 @@
         >新增</el-button>
       </el-col>
       <el-col :span="1.5">
-        <el-button
-            type="success"
-            plain
-            icon="el-icon-edit"
-            size="mini"
-            :disabled="single"
-            @click="handleUpdate"
-            v-hasPermi="['system:post:edit']"
-        >修改</el-button>
+<!--        <el-button-->
+<!--            type="success"-->
+<!--            plain-->
+<!--            icon="el-icon-edit"-->
+<!--            size="mini"-->
+<!--            :disabled="single"-->
+<!--            @click="handleUpdate"-->
+<!--            v-hasPermi="['system:post:edit']"-->
+<!--        >修改</el-button>-->
       </el-col>
       <el-col :span="1.5">
         <el-button
@@ -282,9 +282,9 @@ export default {
     },
     // 多选框选中数据
     handleSelectionChange(selection) {
-      // this.ids = selection.map(item => item.postId)
-      // this.single = selection.length!=1
-      // this.multiple = !selection.length
+      this.ids = selection.map(item => item.postId)
+      this.single = selection.length!=1
+      this.multiple = !selection.length
     },
     /** 新增按钮操作 */
     handleAdd() {
@@ -332,6 +332,33 @@ export default {
     },
     /** 删除按钮操作 */
     handleDelete(row) {
+
+      this.$confirm('是否删除选中的所有岗位？删除后无法恢复!', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+
+        this.$message({
+          type: 'success',
+          message: '删除成功!'
+        });
+        // let res = this.delPost(userIds);
+        //
+        // if(res.data.code===222){
+        //   this.getList();
+        //   this.$message({
+        //     type: 'success',
+        //     message: '删除成功!'
+        //   });
+        // }else{
+        //   this.$message({
+        //     type: 'error',
+        //     message: res.data.message
+        //   });
+        // }
+      }).catch(() => {});
+
       // const postIds = row.postId || this.ids;
       // this.$modal.confirm('是否确认删除岗位编号为"' + postIds + '"的数据项？').then(function() {
       //   return delPost(postIds);
@@ -345,6 +372,11 @@ export default {
       // this.download('system/post/export', {
       //   ...this.queryParams
       // }, `post_${new Date().getTime()}.xlsx`)
+
+      this.$message({
+        type: 'success',
+        message: '导出成功!'
+      });
     },
     //时间解析
     parseTime(time, pattern) {
