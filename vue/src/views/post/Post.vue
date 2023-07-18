@@ -6,6 +6,7 @@
       <el-input style="width: 240px" placeholder="请输入岗位编码" v-model="params.post_code"></el-input>
       <el-input style="width: 240px; margin-left: 5px" placeholder="请输入岗位名称" v-model="params.post_name"></el-input>
       <el-input style="width: 240px; margin-left: 5px" placeholder="请输入岗位状态" v-model="params.status"></el-input>
+
       <el-button style="margin-left: 10px" type="primary" @click="load" ><i class="el-icon-search"></i> 搜索</el-button>
       <el-button style="margin-left: 10px" type="warning" @click="reset" ><i class="el-icon-refresh"></i> 重置</el-button>
     </div>
@@ -22,6 +23,7 @@
       <el-table-column prop="post_code" label="岗位编码" ></el-table-column>
       <el-table-column prop="post_name" label="岗位名称"></el-table-column>
       <el-table-column prop="status" label="岗位状态"></el-table-column>
+
 
 
       <el-table-column prop="create_time" label="创建时间" ></el-table-column>

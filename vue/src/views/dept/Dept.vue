@@ -1,354 +1,453 @@
-<!--用户界面：查、删-->
 <template>
-  <div>
-    <!--    搜索表单-->
-    <div style="margin-bottom: 20px">
-      <el-input style="width: 240px" placeholder="请输入岗位编码" v-model="params.post_code"></el-input>
-      <el-input style="width: 240px; margin-left: 5px" placeholder="请输入岗位名称" v-model="params.post_name"></el-input>
-      <el-input style="width: 240px; margin-left: 5px" placeholder="请输入岗位状态" v-model="params.status"></el-input>
-      <el-button style="margin-left: 10px" type="primary" @click="load" ><i class="el-icon-search"></i> 搜索</el-button>
-      <el-button style="margin-left: 10px" type="warning" @click="reset" ><i class="el-icon-refresh"></i> 重置</el-button>
-    </div>
+  <div class="app-container">
+<!--    头部搜索区-->
+    <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch">
+      <el-form-item label="部门名称" prop="deptName">
+        <el-input
+            v-model="queryParams.deptName"
+            placeholder="请输入部门名称"
+            clearable
+            @keyup.enter.native="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="状态" prop="status">
+        <el-select v-model="queryParams.status" placeholder="部门状态" clearable>
+<!--          <el-option-->
+<!--              v-for="dict in dict.type.sys_normal_disable"-->
+<!--              :key="dict.value"-->
+<!--              :label="dict.label"-->
+<!--              :value="dict.value"-->
+<!--          />-->
+        </el-select>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
+        <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
+      </el-form-item>
+    </el-form>
 
-    <div style="margin-bottom: 10px">
-      <el-button type="primary" @click="add"  ><i class="el-icon-plus"></i>  添加 </el-button>
-      <el-button style="margin-left: 10px" type="info"  ><i class="el-icon-edit"></i>  修改 </el-button>
-      <el-button style="margin-left: 10px" type="danger"   ><i class="el-icon-delete"></i>  删除 </el-button>
-      <el-button style="margin-left: 10px" type="warning"   ><i class="el-icon-download"></i>  导出 </el-button>
-    </div>
+<!--  展开折叠、搜索区-->
+    <el-row :gutter="10" class="mb8">
+      <el-col :span="1.5">
+        <el-button
+            type="primary"
+            plain
+            icon="el-icon-plus"
+            size="mini"
+            @click="handleAdd"
+            v-hasPermi="['system:dept:add']"
+        >新增</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button
+            type="info"
+            plain
+            icon="el-icon-sort"
+            size="mini"
+            @click="toggleExpandAll"
+        >展开/折叠</el-button>
+      </el-col>
+      <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
+    </el-row>
 
-    <el-table :data="tableData" stripe border >
-      <el-table-column prop="dept_name" label="部门名称" ></el-table-column>
-      <el-table-column prop="order_num" label="显示顺序" ></el-table-column>
-      <el-table-column prop="dept_status" label="部门状态"></el-table-column>
-
-      <el-table-column prop="create_time" label="创建时间" ></el-table-column>
-      <el-table-column prop="update_time" label="更新时间"  ></el-table-column>
-
-      <el-table-column label="操作"  width="300" fixed="right" ><!--fixed="right"：固定在右侧-->
-        <template v-slot="scope">
-          <!--编辑按钮-->
-          <el-button type="primary" @click="updateUser(scope.row)"  icon="el-icon-edit" round   style="margin-left: 10px"></el-button>
-          <!--删除按钮-->
-          <el-popconfirm
-              style="margin-left: 10px"
-              title="您确定删除这行数据吗？"
-              @confirm="del(scope.row.id)"
-          >
-            <el-button type="danger" slot="reference"  icon="el-icon-delete" round  ></el-button>
-          </el-popconfirm>
-
-          <!--添加按钮-->
-          <el-button type="primary" @click="add2(scope.row)"  icon="el-icon-plus" round   style="margin-left: 10px"></el-button>
-
+<!--    表格数据区-->
+    <el-table
+        v-if="refreshTable"
+        v-loading="loading"
+        :data="deptList"
+        row-key="deptId"
+        :default-expand-all="isExpandAll"
+        :tree-props="{children: 'children', hasChildren: 'hasChildren'}"
+    >
+      <el-table-column prop="deptName" label="部门名称" width="260"></el-table-column>
+      <el-table-column prop="orderNum" label="排序" width="200"></el-table-column>
+      <el-table-column prop="status" label="状态" width="100">
+<!--        <template slot-scope="scope">-->
+<!--          <dict-tag :options="dict.type.sys_normal_disable" :value="scope.row.status"/>-->
+<!--        </template>-->
+      </el-table-column>
+      <el-table-column label="创建时间" align="center" prop="createTime" width="200">
+        <template slot-scope="scope">
+          <span>{{ parseTime(scope.row.createTime) }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
+        <template slot-scope="scope">
+          <el-button
+              size="mini"
+              type="text"
+              icon="el-icon-edit"
+              @click="handleUpdate(scope.row)"
+              v-hasPermi="['system:dept:edit']"
+          >修改</el-button>
+          <el-button
+              size="mini"
+              type="text"
+              icon="el-icon-plus"
+              @click="handleAdd(scope.row)"
+              v-hasPermi="['system:dept:add']"
+          >新增</el-button>
+          <el-button
+              v-if="scope.row.parentId != 0"
+              size="mini"
+              type="text"
+              icon="el-icon-delete"
+              @click="handleDelete(scope.row)"
+              v-hasPermi="['system:dept:remove']"
+          >删除</el-button>
         </template>
       </el-table-column>
     </el-table>
 
-
-
-    <!--分页-->
-    <div style="margin-top: 20px">
-      <el-pagination
-          background
-          :current-page="params.pageNum"
-          :page-size="params.pageSize"
-          layout="prev, pager, next"
-          @current-change="handleCurrentChange"
-          :total="total">
-      </el-pagination>
-    </div>
-
-
-    <!--添加按钮弹框：1-->
-    <el-dialog title="添加部门" :visible.sync="dialogFormVisible1" width="30%"><!--dialogFormVisible1：控制这个弹框的显示-->
-      <!--ruleForm1用于 修改弹框的表单验证，规则绑定的是 rules-->
-      <el-form :model="form" label-width="100px" ref="ruleForm1" :rules="rules" style="width: 85%">
-        <el-form-item label="部门名称" prop="dept_name">
-          <el-input v-model="form.dept_name" placeholder="请输入岗位名称"></el-input>
-        </el-form-item>
-        <el-form-item label="负责人id" prop="name">
-          <el-input v-model="form.name" placeholder="请输入岗位编码"></el-input>
-        </el-form-item>
-
-        <el-form-item label="部门状态">
-          <el-radio v-model="form.sex"  label="男">正常</el-radio>
-          <el-radio v-model="form.sex"  label="女">停用</el-radio>
-        </el-form-item>
-        <el-form-item label="备注" prop="phone">
-          <el-input v-model="form.phone" placeholder="请输入备注"></el-input>
-        </el-form-item>
-
+    <!-- 添加或修改部门对话框 -->
+    <el-dialog :title="title" :visible.sync="open" width="600px" append-to-body>
+      <el-form ref="form" :model="form" :rules="rules" label-width="80px">
+        <el-row>
+          <el-col :span="24" v-if="form.parentId !== 0">
+            <el-form-item label="上级部门" prop="parentId">
+              <treeselect v-model="form.parentId" :options="deptOptions" :normalizer="normalizer" placeholder="选择上级部门" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="部门名称" prop="deptName">
+              <el-input v-model="form.deptName" placeholder="请输入部门名称" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="显示排序" prop="orderNum">
+              <el-input-number v-model="form.orderNum" controls-position="right" :min="0" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="负责人" prop="leader">
+              <el-input v-model="form.leader" placeholder="请输入负责人" maxlength="20" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="联系电话" prop="phone">
+              <el-input v-model="form.phone" placeholder="请输入联系电话" maxlength="11" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="邮箱" prop="email">
+              <el-input v-model="form.email" placeholder="请输入邮箱" maxlength="50" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="部门状态">
+<!--              <el-radio-group v-model="form.status">-->
+<!--                <el-radio-->
+<!--                    v-for="dict in dict.type.sys_normal_disable"-->
+<!--                    :key="dict.value"-->
+<!--                    :label="dict.value"-->
+<!--                >{{dict.label}}</el-radio>-->
+<!--              </el-radio-group>-->
+            </el-form-item>
+          </el-col>
+        </el-row>
       </el-form>
       <div slot="footer" class="dialog-footer">
-        <el-button @click="dialogFormVisible1 = false">取 消</el-button>
-        <el-button type="primary" @click="submit1">确 定</el-button>
+        <el-button type="primary" @click="submitForm">确 定</el-button>
+        <el-button @click="cancel">取 消</el-button>
       </div>
     </el-dialog>
-
-    <!--修改用户按钮弹框：2-->
-    <el-dialog title="修改部门" :visible.sync="dialogFormVisible2" width="30%">
-      <!--ruleForm2用于 修改弹框的表单验证，规则绑定的是 rules-->
-      <el-form  :model="form" ref="ruleForm2" :rules="rules" label-width="100px"  style="width: 85%">
-        <!--        <el-form-item label="昵称" prop="username">-->
-        <!--          <el-input v-model="form.username" placeholder="请输入昵称" ></el-input>-->
-        <!--        </el-form-item>-->
-        <el-form-item label="上级部门" prop="dept_name">
-          <el-input v-model="form.ancestors" placeholder="请输入上级部门"></el-input>
-        </el-form-item>
-        <el-form-item label="部门名称" prop="dept_name">
-          <el-input v-model="form.dept_name" placeholder="请输入部门名称"></el-input>
-        </el-form-item>
-        <el-form-item label="显示顺序" prop="order_num">
-          <el-input v-model="form.order_num" placeholder="请输入部门名称"></el-input>
-        </el-form-item>
-        <el-form-item label="负责人" prop="leader_id">
-          <el-input v-model="form.leader_id" placeholder="请输入负责人"></el-input>
-        </el-form-item>
-        <el-form-item label="联系电话" prop="leader_id">
-          <el-input v-model="form.leader_id" placeholder="请输入负责人"></el-input>
-        </el-form-item>
-        <el-form-item label="邮箱" prop="leader_id">
-          <el-input v-model="form.leader_id" placeholder="请输入负责人"></el-input>
-        </el-form-item>
-        <el-form-item label="部门状态" prop="sex">
-          <el-radio v-model="form.sex"  label="男">正常</el-radio>
-          <el-radio v-model="form.sex"  label="女">停用</el-radio>
-        </el-form-item>
-
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button @click="dialogFormVisible2 = false">取 消</el-button>
-        <el-button type="primary" @click="submit2">确 定</el-button>
-      </div>
-    </el-dialog>
-
-
-
-
   </div>
 </template>
 
 <script>
-
+// import { listDept, getDept, delDept, addDept, updateDept, listDeptExcludeChild } from "@/api/system/dept";
+import Treeselect from "@riophae/vue-treeselect";
+import "@riophae/vue-treeselect/dist/vue-treeselect.css";
 
 export default {
-  name: 'Dept',
+  name: "Dept",
+  // dicts: ['sys_normal_disable'],
+  components: { Treeselect },
   data() {
-    //自定义表单验证方法：检查age
-    const checkAge = (rule, value, callback) => {
-      if (!value) {
-        return callback(new Error('年龄不能为空'));
-      }
-      if (!/^[0-9]+$/.test(value)) {//正则表达式
-        callback(new Error('请输入数字值'));
-      }
-      if (parseInt(value) > 120 || parseInt(value) <= 0) {
-        callback(new Error('请输入合理的年龄'));
-      }
-      callback()
-    };
-    //自定义表单验证方法：检查phone
-    const checkPhone = (rule, value, callback) => {
-      if (!/^[1][3,4,5,6,7,8,9][0-9]{9}$/.test(value)) {//正则表达式
-        callback(new Error('请输入合法的手机号'));
-      }
-      callback()
-    };
-    //自定义表单验证方法：检查nums
-    const checkNums = (rule, value, callback) => {
-      value = parseInt(value)
-      if (value < 10 || value > 200) {
-        callback(new Error('请输入大于等于10小于或等于200的整数'));
-      }
-      callback()
-    };
     return {
-      tableData: [//页面数据显示
 
+      urls:{
+        listDept:'/system/dept/list',// 查询部门列表
+        getDept:'/system/dept/',// 查询部门详细
+        addDept:'/system/dept', // 新增部门
+        delDept: '/system/dept/',// 删除部门
+        updateDept:'/system/dept',// 修改部门
+        listDeptExcludeChild:'/user/add', // 查询部门列表（排除节点）
+
+
+
+      },
+
+
+      // 遮罩层
+      loading: false,
+      // 显示搜索条件
+      showSearch: true,
+      // 表格树数据
+      deptList: [
         {
-          dept_name: '若依科技',
-          dept_status: '1',
-          order_num: '0',
-          create_time:'2023-07-03 20:47:47',
-          update_time:'2023-07-03 20:47:47',
-        }, {
-          dept_name: '若依科技',
-          dept_status: '1',
-          order_num: '0',
-          create_time:'2023-07-03 20:47:47',
-          update_time:'2023-07-03 20:47:47',
-        }, {
-          dept_name: '若依科技',
-          dept_status: '1',
-          order_num: '0',
-          create_time:'2023-07-03 20:47:47',
-          update_time:'2023-07-03 20:47:47',
-        }, {
-          dept_name: '若依科技',
-          dept_status: '1',
-          order_num: '0',
-          create_time:'2023-07-03 20:47:47',
-          update_time:'2023-07-03 20:47:47',
-        }
-
+          deptName:"测试数据",
+          orderNum:"测试数据",
+          status:"测试数据",
+          createTime:"测试数据",
+        },
+        {
+          deptName:"测试数据",
+          orderNum:"测试数据",
+          status:"测试数据",
+          createTime:"测试数据",
+        },
 
       ],
-      total: 0,
-      params: {
-        //分页
-        pageNum: 1,
-        pageSize: 10,
-        name: '',
-        phone: ''
+      // 部门树选项
+      deptOptions: [],
+      // 弹出层标题
+      title: "",
+      // 是否显示弹出层
+      open: false,
+      // 是否展开，默认全部展开
+      isExpandAll: true,
+      // 重新渲染表格状态
+      refreshTable: true,
+      // 查询参数
+      queryParams: {
+        deptName: undefined,
+        status: undefined,
       },
-      //1是添加用户弹框，2是修改用户按钮弹框，3是充值弹框,4是借书
-      dialogFormVisible1: false,
-      dialogFormVisible2: false,
-      dialogFormVisible3: false,
+      // 表单参数
       form: {},
-      rules: {//表单验证规则，下面的规则 与form表单中的 prop 的值绑定
-        score: [
-          { required: true, message: '请输入积分', trigger: 'blur'},
-          { validator: checkNums, trigger: 'blur'}
+      // 表单校验
+      rules: {
+        parentId: [
+          { required: true, message: "上级部门不能为空", trigger: "blur" }
         ],
-        name: [
-          { required: true, message: '请输入姓名', trigger: 'blur'}
+        deptName: [
+          { required: true, message: "部门名称不能为空", trigger: "blur" }
         ],
-        age: [
-          { validator: checkAge, trigger: 'blur' }
+        orderNum: [
+          { required: true, message: "显示排序不能为空", trigger: "blur" }
+        ],
+        email: [
+          {
+            type: "email",
+            message: "请输入正确的邮箱地址",
+            trigger: ["blur", "change"]
+          }
         ],
         phone: [
-          { validator: checkPhone, trigger: 'blur' }
+          {
+            pattern: /^1[3|4|5|6|7|8|9][0-9]\d{8}$/,
+            message: "请输入正确的手机号码",
+            trigger: "blur"
+          }
         ]
       }
-    }
+    };
   },
-  created() {//在页面加载时就调用 分页查询的方法
-    this.load()
+  created() {
+    this.getList();
   },
   methods: {
-    //修改用户状态 的开关 方法
-    changeStatus(row) {//直接将 row的所有内容传输过去，因为我们只修改了一个状态，其他都没变，所以还是可以调用用户修改的借口
-      // request.put('/user/update', row).then(res => {
-      //   if (res.code === '200') {//如果后端传来 200 则表示成功
-      //     this.$notify.success('操作成功')
-      //     this.load()
-      //   } else {
-      //     this.$notify.error(res.msg)
-      //   }
-      // })
+
+    /** 查询部门列表 */
+    getList() {
+      // this.loading = true;
+      // listDept(this.queryParams).then(response => {
+      // this.urls.listDept(this.queryParams).then(response => {
+      //   this.deptList = this.handleTree(response.data, "deptId");
+      //   this.loading = false;
+      // });
     },
-    //分页查询方法
-    load() {
-
-      // fetch('http://localhost:9090/user/list').then(res => res.json()).then(res => {
-      //   console.log(res)
-      //   this.tableData = res
-      // })
-
-
-      // request.get('/user/page', {
-      //   params: this.params//params：传过去的参数
-      // }).then(res => {
-      //   if (res.code === '200') {//如果后端传来 200 则表示成功
-      //     this.tableData = res.data.list
-      //     this.total = res.data.total
-      //   }
-      // })
+    /** 转换部门数据结构 */
+    normalizer(node) {
+      // if (node.children && !node.children.length) {
+      //   delete node.children;
+      // }
+      // return {
+      //   id: node.deptId,
+      //   label: node.deptName,
+      //   children: node.children
+      // };
     },
-    //重置搜索按钮 的方法
-    reset() {//将name 和 phone 内容清空，重新加载页面
-      this.params = {
-        pageNum: 1,
-        pageSize: 10,
-        name: '',
-        phone: ''
+    // 取消按钮
+    cancel() {
+      this.open = false;
+      this.reset();
+    },
+    // 表单重置
+    reset() {
+      this.form = {
+        deptId: undefined,
+        parentId: undefined,
+        deptName: undefined,
+        orderNum: undefined,
+        leader: undefined,
+        phone: undefined,
+        email: undefined,
+        status: "0"
+      };
+      // this.resetForm("form");
+      //替换成下面的直接清空
+      this.queryParams  = {
+        deptName: undefined,
+        status: undefined,
+
+      };
+
+    },
+    /** 搜索按钮操作 */
+    handleQuery() {
+      this.getList();
+    },
+    /** 重置按钮操作 */
+    resetQuery() {
+      this.queryParams  = {
+        deptName: undefined,
+        status: undefined,
+
+      };
+      this.resetForm("queryForm");//指定清空搜索框里面内容
+      this.handleQuery();//执行搜索方法
+    },
+    /** 新增按钮操作 */
+    handleAdd(row) {
+      this.reset();//表单重置
+      if (row != undefined) {
+        this.form.parentId = row.deptId;
       }
-      this.load()
+      this.open = true;
+      this.title = "添加部门";
+      // listDept().then(response => {
+      //   this.deptOptions = this.handleTree(response.data, "deptId");
+      // });
     },
-    //添加用户按钮 的方法
-    add() {
-      this.dialogFormVisible1 = true//让添加弹框显示
-      this.form = {sex: '男',account: '0'}//清空form中存储的用于修改按钮回显的数据，防止添加新用户时出现修改时回显的数据
-      // 让account 默认为0，添加的用户账户就是0积分
+    /** 展开/折叠操作 */
+    toggleExpandAll() {
+      // this.refreshTable = false;
+      // this.isExpandAll = !this.isExpandAll;
+      // this.$nextTick(() => {
+      //   this.refreshTable = true;
+      // });
     },
-    //修改用户按钮 的方法
-    updateUser(row){//row就是表格那一行的数据，用row做到数据回显
-      this.dialogFormVisible2 = true
-      this.form = row
+
+    /** 修改按钮操作 */
+    handleUpdate(row) {
+      this.reset();
+      //先拿着id去查询出来这个数据，再把数据赋给form
+      // getDept(row.deptId).then(response => {
+      //   this.form = response.data;
+        this.form = {
+          deptId: "测试数据",
+          parentId: "测试数据",
+          deptName: "测试数据",
+          orderNum: "测试数据",
+          leader: "测试数据",
+          phone: "测试数据",
+          email: "测试数据",
+          status: "0"
+        }
+        this.open = true;
+        this.title = "修改部门";
+        //执行修改请求
+        // listDeptExcludeChild(row.deptId).then(response => {
+        //   this.deptOptions = this.handleTree(response.data, "deptId");
+        //   if (this.deptOptions.length == 0) {
+        //     const noResultsOptions = { deptId: this.form.parentId, deptName: this.form.parentName, children: [] };
+        //     this.deptOptions.push(noResultsOptions);
+        //   }
+        // });
+      // });
+
+
+      // this.reset();
+      // getDept(row.deptId).then(response => {
+      //   this.form = response.data;
+      //   this.open = true;
+      //   this.title = "修改部门";
+      //   listDeptExcludeChild(row.deptId).then(response => {
+      //     this.deptOptions = this.handleTree(response.data, "deptId");
+      //     if (this.deptOptions.length == 0) {
+      //       const noResultsOptions = { deptId: this.form.parentId, deptName: this.form.parentName, children: [] };
+      //       this.deptOptions.push(noResultsOptions);
+      //     }
+      //   });
+      // });
     },
-    //删除用户按钮 的方法
-    del(id) {
-      // request.delete("/user/delete/" + id).then(res => {
-      //   if (res.code === '200') {//如果后端数据 发来200 表明成功
-      //     this.$notify.success('删除成功')
-      //     this.load()
-      //   } else {
-      //     this.$notify.error(res.msg)
+    /** 提交按钮 */
+    submitForm: function() {
+      // this.$refs["form"].validate(valid => {
+      //   if (valid) {
+      //     if (this.form.deptId != undefined) {
+      //       updateDept(this.form).then(response => {
+      //         this.$modal.msgSuccess("修改成功");
+      //         this.open = false;
+      //         this.getList();
+      //       });
+      //     } else {
+      //       addDept(this.form).then(response => {
+      //         this.$modal.msgSuccess("新增成功");
+      //         this.open = false;
+      //         this.getList();
+      //       });
+      //     }
       //   }
-      // })
+      // });
     },
-    //充值按钮 的方法
-    handleAccountAdd(row) {
-      if (row.status == 0){//如果status是0，则表示不可用
-        this.$notify.error('该用户不可使用')
-      }else {
-        this.form = JSON.parse(JSON.stringify(row))
-        this.dialogFormVisible3 = true//让弹框3显示
+    /** 删除按钮操作 */
+    handleDelete(row) {
+      // this.$modal.confirm('是否确认删除名称为"' + row.deptName + '"的数据项？').then(function() {
+      //   return delDept(row.deptId);
+      // }).then(() => {
+      //   this.getList();
+      //   this.$modal.msgSuccess("删除成功");
+      // }).catch(() => {});
+    },
+    //时间解析
+    parseTime(time, pattern) {
+      if (arguments.length === 0 || !time) {
+        return null
       }
+      const format = pattern || '{y}-{m}-{d} {h}:{i}:{s}'
+      let date
+      if (typeof time === 'object') {
+        date = time
+      } else {
+        if ((typeof time === 'string') && (/^[0-9]+$/.test(time))) {
+          time = parseInt(time)
+        } else if (typeof time === 'string') {
+          time = time.replace(new RegExp(/-/gm), '/').replace('T', ' ').replace(new RegExp(/\.[\d]{3}/gm), '');
+        }
+        if ((typeof time === 'number') && (time.toString().length === 10)) {
+          time = time * 1000
+        }
+        date = new Date(time)
+      }
+      const formatObj = {
+        y: date.getFullYear(),
+        m: date.getMonth() + 1,
+        d: date.getDate(),
+        h: date.getHours(),
+        i: date.getMinutes(),
+        s: date.getSeconds(),
+        a: date.getDay()
+      }
+      const time_str = format.replace(/{(y|m|d|h|i|s|a)+}/g, (result, key) => {
+        let value = formatObj[key]
+        // Note: getDay() returns 0 on Sunday
+        if (key === 'a') { return ['日', '一', '二', '三', '四', '五', '六'][value] }
+        if (result.length > 0 && value < 10) {
+          value = '0' + value
+        }
+        return value || 0
+      })
+      return time_str
     },
-
-    //添加用户 确认提交的方法
-    submit1() {
-      //ruleForm1：添加弹框的表单验证
-      // this.$refs['ruleForm1'].validate((valid) => {
-      //   if (valid) {//表单验证通过才能执行下面
-      //     request.post('/user/save', this.form).then(res => {
-      //       if (res.code === '200') {//如果后端数据 发来200 表明成功
-      //         this.$notify.success('新增成功')
-      //         this.$refs['ruleForm1'].resetFields()
-      //         this.dialogFormVisible1 = false
-      //         this.load()
-      //       } else {
-      //         this.$notify.error(res.msg)
-      //       }
-      //     })
-      //   }
-      // })
-    },
-    //修改用户 确认提交的方法
-    submit2() {
-      //ruleForm2：修改弹框的表单验证
-      // this.$refs['ruleForm2'].validate((valid) => {
-      //   if (valid) {//表单验证通过才能执行下面
-      //     request.put('/user/update', this.form).then(res => {
-      //       if (res.code === '200') {//如果后端数据 发来200 表明成功
-      //         this.$notify.success('更新成功')//提示信息
-      //         this.$refs['ruleForm2'].resetFields()
-      //         this.dialogFormVisible2 = false//让弹框消失
-      //         this.load()//重新加载页面
-      //       } else {
-      //         this.$notify.error(res.msg)
-      //       }
-      //     })
-      //   }
-      // })
-    },
-
-
-
-    handleCurrentChange(pageNum) {
-      // 点击分页按钮触发分页
-      this.params.pageNum = pageNum
-      this.load()
-    },
-
-
   }
-}
+};
 </script>
-
-<style scoped>
-
-</style>
