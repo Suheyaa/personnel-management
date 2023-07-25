@@ -230,8 +230,8 @@ export default {
 
 
       urls:{
-        listDept:'/dept/list',// 查询部门列表
-        // listDept:'/dept/getDeptTree',// 查询部门列表
+        listDept2:'/dept/list',// 查询部门列表：普通
+        listDept:'/dept/getDeptTree',// 查询部门列表：树形
         addDept:'/dept/insert', // 新增部门
         delDept: '/dept/delete/',// 删除部门
         updateDept:'/dept/update',// 修改部门
@@ -268,8 +268,27 @@ export default {
       showSearch: true,
       // 表格树数据
       deptList: [
-
-
+        {
+          // id: "1",
+          // deptName: "若依科技",
+          // deptStatus: 1,
+          // superiorId: "0",
+          // orderNum: 1,
+          // ancestors: "0",
+          // createTime: "2023-07-18 08:49:56",
+          // leaderId: "1678651668064612354",
+          //
+          // children: [{
+          //   id: "1",
+          //   deptName: "若依科技",
+          //   deptStatus: 1,
+          //   superiorId: "0",
+          //   orderNum: 1,
+          //   ancestors: "0",
+          //   createTime: "2023-07-18 08:49:56",
+          //   leaderId: "1678651668064612354",
+          // }]
+        },
       ],
       // 部门树选项
       deptOptions: [],
@@ -325,7 +344,7 @@ export default {
 
 
 
-    /** 查询部门列表 */
+    /** 查询部门列表：查出树形结构 */
     getList() {
       axios({
         method:"get",
@@ -335,12 +354,14 @@ export default {
           deptStatus : this.queryParams.deptStatus,
         }
       }).then(res => {
-            // this.userList = res.data.rows;
-            // this.total = res.data.total;
         this.deptList = res.data.data;
           }
       );
     },
+
+
+
+
     /** 转换部门数据结构 */
     normalizer(node) {
       if (node.children && !node.children.length) {
@@ -384,7 +405,22 @@ export default {
     },
     /** 搜索按钮操作 */
     handleQuery() {
-      this.getList();
+      // this.getList();
+
+      //搜索功能没有做树形结构，按照普通结构来的
+      //先清空表格数据
+      this.deptList = undefined;
+      axios({
+        method:"get",
+        url:this.urls.listDept2,
+        params: {
+          deptName : this.queryParams.deptName,
+          deptStatus : this.queryParams.deptStatus,
+        }
+      }).then(res => {
+            this.deptList = res.data.data;
+          }
+      );
     },
     /** 重置按钮操作 */
     resetQuery() {
@@ -393,7 +429,7 @@ export default {
         deptStatus: undefined,
 
       };
-      this.handleQuery();//执行搜索方法
+      this.getList();
     },
     /** 新增 添加 按钮操作 */
     handleAdd(row) {
@@ -489,6 +525,7 @@ export default {
                 type: 'success',
                 message: '添加成功!'
               });
+
               this.open = false;
               this.getList();
                 }
