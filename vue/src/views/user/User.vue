@@ -15,6 +15,7 @@
         </div>
         <div class="head-container">
           <el-tree
+              class="filter-tree"
               :data="deptOptions"
               :props="defaultProps"
               :expand-on-click-node="false"
@@ -61,7 +62,7 @@
             <el-date-picker
                 v-model="dateRange"
                 style="width: 240px"
-                value-format="yyyy-MM-dd"
+                value-format="yyyy-MM-dd HH:mm:ss"
                 type="daterange"
                 range-separator="-"
                 start-placeholder="开始日期"
@@ -116,13 +117,16 @@
 
         <el-table  :data="userList" @selection-change="handleSelectionChange">
           <el-table-column type="selection" width="50" align="center" />
-<!--          TODO将用户编号换成前端插件生成-->
-          <el-table-column label="用户编号" align="center" key="userId" prop="userId"  />
+          <el-table-column
+              label="序号"
+              type="index"
+              width="50">
+          </el-table-column>
           <el-table-column label="用户名称" align="center" key="userName" prop="userName"  :show-overflow-tooltip="true" />
           <el-table-column label="用户昵称" align="center" key="nickName" prop="nickName" :show-overflow-tooltip="true" />
           <el-table-column label="部门" align="center" key="deptName" prop="dept.deptName" :show-overflow-tooltip="true" />
           <el-table-column label="手机号码" align="center" key="phone" prop="phone"  width="120" />
-          <el-table-column label="状态" align="center" key="status">
+          <el-table-column label="状态" align="center" key="status" prop="status">
             <template slot-scope="scope">
               <el-switch
                   v-model="scope.row.status"
@@ -143,7 +147,7 @@
               width="160"
               class-name="small-padding fixed-width"
           >
-            <template slot-scope="scope" v-if="scope.row.userId !== 1">
+            <template slot-scope="scope" v-if="scope.row.id !== 1">
               <el-button
                   size="mini"
                   type="text"
@@ -163,7 +167,7 @@
         <Pagination
             v-show="total>0"
             :total="total"
-            :page.sync="queryParams.pageNum"
+            :page.sync="queryParams.pageIndex"
             :limit.sync="queryParams.pageSize"
             @pagination="getList"
         />
@@ -176,12 +180,12 @@
           <el-row>
             <el-col :span="12">
               <el-form-item label="用户昵称" prop="nickName">
-                <el-input v-model="form.nickName" placeholder="请输入用户昵称" maxlength="30" />
+                <el-input v-model="form.nickName" placeholder="长度必须介于 2 和 20 之间" maxlength="30" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
               <el-form-item label="归属部门" prop="deptId">
-                <treeselect v-model="form.deptId" :options="deptOptions" :show-count="true" placeholder="请选择归属部门" />
+                <treeselect v-model="form.deptId" :normalizer="tenantIdnormalizer" :options="deptOptions" :show-count="true" placeholder="请选择归属部门" />
               </el-form-item>
             </el-col>
           </el-row>
@@ -199,32 +203,26 @@
           </el-row>
           <el-row>
             <el-col :span="12">
-              <el-form-item v-if="form.userId == undefined" label="用户名称" prop="userName">
+              <el-form-item v-if="form.id == undefined" label="用户名称" prop="userName">
                 <el-input v-model="form.userName" placeholder="请输入用户名称" maxlength="30" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item v-if="form.userId == undefined" label="用户密码" prop="password">
-                <el-input v-model="form.password" placeholder="请输入用户密码" type="password" maxlength="20" show-password/>
+              <el-form-item v-if="form.id == undefined" label="用户密码" prop="password">
+                <el-input v-model="form.password" placeholder="长度必须介于 5 和 20 之间" type="password" maxlength="20" show-password/>
               </el-form-item>
             </el-col>
           </el-row>
           <el-row>
             <el-col :span="12">
               <el-form-item label="用户性别">
-                <el-select v-model="form.sex" placeholder="请选择性别">
+                <el-select v-model="form.sex" placeholder="请选择性别" :formatter="sexformatter">
                   <el-option
-                      label="男"
-                      value="1"
-                  ></el-option>
-                  <el-option
-                      label="女"
-                      value="2"
-                  ></el-option>
-                  <el-option
-                      label="未知"
-                      value="0"
-                  ></el-option>
+                  v-for="item in sexList"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value">
+                  </el-option>
                 </el-select>
               </el-form-item>
             </el-col>
@@ -240,12 +238,12 @@
           <el-row>
             <el-col :span="12">
               <el-form-item label="岗位">
-                <el-select v-model="form.postIds" multiple placeholder="请选择岗位">
+                <el-select v-model="form.postId" multiple placeholder="请选择岗位">
                   <el-option
                       v-for="item in postOptions"
-                      :key="item.postId"
+                      :key="item.id"
                       :label="item.postName"
-                      :value="item.postId"
+                      :value="item.id"
                       :disabled="item.status == 1"
                   ></el-option>
                 </el-select>
@@ -253,12 +251,12 @@
             </el-col>
             <el-col :span="12">
               <el-form-item label="角色">
-                <el-select v-model="form.roleIds" multiple placeholder="请选择角色">
+                <el-select v-model="form.roleId" multiple placeholder="请选择角色">
                   <el-option
                       v-for="item in roleOptions"
-                      :key="item.roleId"
+                      :key="item.id"
                       :label="item.roleName"
-                      :value="item.roleId"
+                      :value="item.id"
                       :disabled="item.status == 1"
                   ></el-option>
                 </el-select>
@@ -296,9 +294,9 @@
             <i class="el-icon-upload"></i>
             <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
             <div class="el-upload__tip text-center" slot="tip">
-              <div class="el-upload__tip" slot="tip">
-                <el-checkbox v-model="upload.updateSupport" /> 是否更新已经存在的用户数据
-              </div>
+<!--              <div class="el-upload__tip" slot="tip">-->
+<!--                <el-checkbox v-model="upload.updateSupport" /> 是否更新已经存在的用户数据-->
+<!--              </div>-->
               <span>仅允许导入xls、xlsx格式文件。</span>
               <el-link type="primary" :underline="false" style="font-size:12px;vertical-align: baseline;" @click="importTemplate">下载模板</el-link>
             </div>
@@ -320,12 +318,18 @@ import "@riophae/vue-treeselect/dist/vue-treeselect.css";
 export default {
   components: {Pagination,Treeselect},
   created() {
-    // this.load();测试
+    this.getList();
+    this.getDeptTree();
+  },
+  watch: {
+    deptName(val) {
+      this.$refs.tree.filter(val);
+    },
   },
   data() {
     return {
       // 遮罩层
-      // loading: false,
+      loading: false,
 
       // 选中数组
       ids: [],
@@ -340,83 +344,91 @@ export default {
       // 弹出层标题
       title: "",
 
-      deptName: "",
-      deptOptions: [{
-        id: 1,
-        label: '一级 1',
-        children: [{
-          id: 4,
-          label: '二级 1-1',
-          children: [{
-            id: 9,
-            label: '三级 1-1-1'
-          }, {
-            id: 10,
-            label: '三级 1-1-2'
-          }]
-        }]
-      }, {
-        id: 2,
-        label: '一级 2',
-        children: [{
-          id: 5,
-          label: '二级 2-1'
-        }, {
-          id: 6,
-          label: '二级 2-2'
-        }]
-      }, {
-        id: 103,
-        label: '测试部门',
-        children: [{
-          id: 7,
-          label: '二级 3-1'
-        }, {
-          id: 8,
-          label: '二级 3-2'
-        }]
-      }],
+      deptName:undefined,
+      deptOptions: undefined,
+          // [
+      //     {
+      //   id: 1,
+      //   label: '一级 1',
+      //   children: [{
+      //     id: 4,
+      //     label: '二级 1-1',
+      //     children: [{
+      //       id: 9,
+      //       label: '三级 1-1-1'
+      //     }, {
+      //       id: 10,
+      //       label: '三级 1-1-2'
+      //     }]
+      //   }]
+      // }, {
+      //   id: 2,
+      //   label: '一级 2',
+      //   children: [{
+      //     id: 5,
+      //     label: '二级 2-1'
+      //   }, {
+      //     id: 6,
+      //     label: '二级 2-2'
+      //   }]
+      // }, {
+      //   id: 105,
+      //   label: '测试部门',
+      //   children: [{
+      //     id: 7,
+      //     label: '二级 3-1'
+      //   }, {
+      //     id: 8,
+      //     label: '二级 3-2'
+      //   }]
+      // }
+      // ],
       defaultProps: {
         children: 'children',
-        label: 'label'
+        label: 'deptName'
       },
       // 查询参数
       queryParams: {
-        pageNum: 1,
+        pageIndex: 1,
         pageSize: 10,
-        userName: "",
-        phone: "",
-        status: "",
-        deptId: "",
-        beginTime: "",
-        endTime: ""
+        userName: undefined,
+        phone: undefined,
+        status: undefined,
+        deptId: undefined,
+        beginTime: undefined,
+        endTime: undefined
+      },
+      //修改状态参数
+      statusParams:{
+        status: undefined,
+        id:undefined
       },
       // 显示搜索条件
       showSearch: true,
       // 总条数  初始为0
-      total: 0,
+      total:0,
       // 日期范围
       dateRange: [],
       // 用户表格数据
       userList: [
-        {
-          deptId: 103,
-          email: "ry@163.com",
-          createTime: "2023-04-23 16:11:38",
-          userId: 2,
-          userName: "admin",
-          sex: "1",
-          status: "1",
-          remark: "管理员",
-          phone: "15888888888",
-          password: null,
-          nickName: "若依",
-          dept: {
-            deptId: 103,
-            deptName: "研发部门",
-            leader: "若依"
-          },
-        },
+        // {
+        //   deptId: 103,
+        //   email: "ry@163.com",
+        //   createTime: "2023-04-23 16:11:38",
+        //   id: 2,
+        //   userName: "admin",
+        //   sex: "1",
+        //   status: "1",
+        //   remark: "管理员",
+        //   phone: "15888888888",
+        //   password: null,
+        //   nickName: "若依",
+        //   dept: {
+        //     deptId: 103,
+        //     deptName: "研发部门",
+        //     leader: "若依"
+        //   },
+        // },
       ],
       // 用户导入参数
       upload: {
@@ -437,16 +449,31 @@ export default {
       postOptions: [],
       // 角色选项
       roleOptions: [],
-
+      sexList:[
+        {
+          label:"男",
+          value:1
+        },
+        {
+          label:"女",
+          value:2
+        },
+        {
+          label:"未知",
+          value:0
+        },
+      ],
       urls:{
         getUserList:'/user/search',
-        changeUserStatus:'/user/statuschange',
-        delete: '/user/delete/',
-        getPostsAndRoles:'/user/choose/',
+        changeUserStatus:'/user/status-change',
+        delete: '/user/delete',
+        getPostsAndRoles:'/user/choose',
         addUser:'/user/add',
         updateUser: '/user/update',
         exportExcel: '/user/export',
         downloadTemplate: '/user/downloadtemplate',
+        importExcel:'/user/import',
+        getDeptTree:"/user/userTree",
       },
       // 表单校验
       rules: {
@@ -482,38 +509,46 @@ export default {
   methods:{
     /** 查询用户列表 */
     getList() {
-      // this.loading = true;
+      this.loading = true;
       let param =this.addDateRange(this.queryParams, this.dateRange);
-      console.log(param);
-      this.total=10;
-      //
-      // axios({
-      //   method:"get",
-      //   data:param,
-      //   url:this.urls.getUserList
-      // }).then(res => {
-      //       this.userList = res.data.rows;
-      //       this.total = res.data.total;
-      //     }
-      // );
+      axios({
+        method:"post",
+        data:param,
+        url:this.urls.getUserList
+      }).then(res => {
+            this.userList = res.data.data.list;
+            this.total = parseInt(res.data.data.total);
+            this.userList.forEach((item,index)=>{
+              item.status=item.status+""
+            });
+          }
+      );
     },
     /** 提交按钮 */
     submitForm: function() {
       this.$refs["form"].validate(valid => {
         if (valid) {
-          if (this.form.userId != undefined) {
-            this.$message.success("修改成功");
+          if (this.form.id != undefined) {
             this.open = false;
-            this.getList();
-            // this.updateUser(this.form);
+            this.updateUser(this.form);
           } else {
-            this.$message.success("新增成功");
             this.open = false;
-            this.getList();
-            // this.addUser(this.form);
+            this.addUser(this.form);
           }
         }
       });
+    },
+    getDeptTree(){
+      axios({
+        url:this.urls.getDeptTree,
+        method:"GET",
+      }).then(res=>{
+        if(res.data.status==0){
+            this.deptOptions=res.data.data;
+        }
+      }).catch(res=>{
+        this.$message.error(res.data.msg);
+      })
     },
     //updateUser
     updateUser(data){
@@ -522,15 +557,15 @@ export default {
         data:data,
         url:this.urls.updateUser
       }).then(res=>{
-        if(res.data.code===222){
+        if(res.data.data===1){
           this.$message.success("修改成功");
           this.open = false;
           this.getList();
         }else {
-          this.$message.info(res.data.message);
+          this.$message.info(res.data.msg);
         }
       }).catch(res=>{
-        this.$message.error(res.data.message);
+        this.$message.error(res.data.msg);
       })
     },
 
@@ -540,18 +575,29 @@ export default {
         data:data,
         url:this.urls.addUser
       }).then(res=>{
-        if(res.data.code===222){
+        if(res.data.data===1){
           this.$message.success("新增成功");
           this.open = false;
           this.getList();
         }else {
-          this.$message.info(res.data.message);
+          this.$message.info(res.data.msg);
         }
       }).catch(res=>{
-        this.$message.error(res.data.message);
+        this.$message.error(res.data.msg);
       })
 
     },
+    tenantIdnormalizer(node) {
+      if (node.children && !node.children.length) {
+        delete node.children
+      }
+      return {
+        id: node.id,
+        label: node.deptName,
+        children: node.children
+      }
+    },
+
 // 选择图标
     selected(name) {
       this.form.icon = name;
@@ -563,19 +609,18 @@ export default {
     },
     addDateRange(params, dateRange){
       let search = params;
-      search.beginTime=dateRange[0];
-      search.endTime=dateRange[1];
+      search.createTimeStart=dateRange[0];
+      search.createTimeEnd=dateRange[1];
       return search;
     },
     /** 搜索按钮操作 */
     handleQuery() {
-      this.queryParams.pageNum = 1;
-
+      this.queryParams.pageIndex = 1;
       this.getList();
     },
     filterNode(value, data) {
       if (!value) return true;
-      return data.label.indexOf(value) !== -1;
+      return data.deptName.indexOf(value) !== -1;
     },
     // 节点单击事件
     handleNodeClick(data) {
@@ -586,7 +631,7 @@ export default {
     resetQuery() {
       this.dateRange = [];
       this.resetForm("queryForm");
-      this.queryParams.deptId = "";
+      this.queryParams.deptId =undefined;
       this.$refs.tree.setCurrentKey(null);
       this.handleQuery();
     },
@@ -596,72 +641,73 @@ export default {
       }
     },
 
-    getUser(userId){
-      let url = this.urls.getPostsAndRoles + this.parseStrEmpty(userId);
-      console.log(url)
-      let response={};
-      // axios({
-      //   method: "get",
-      //   url:url
-      // }).then(res=>{
-      //   response=res;
-      // }).catch((res)=>{
-      //   this.$message.error(res.data.message)
-      // })
-       return response;
+    sexformatter(row, column) {
+      return row.sex === 1? "1" : "0";
     },
-
     /** 修改按钮操作 */
     handleUpdate(row) {
       this.reset();
-      let response=this.getUser(row.userId);
-      console.log(response);
-      this.form = {
-        deptId: 103,
-        email: "ry@163.com",
-        createTime: "2023-04-23 16:11:38",
-        userId: 2,
-        userName: "admin",
-        sex: "1",
-        status: 1,
-        remark: "管理员",
-        phone: "15888888888",
-        password: null,
-        nickName: "若依",
-        dept: {
-          deptId: 103,
-          deptName: "研发部门",
-          leader: "若依"
+      axios({
+        method: "post",
+        url:this.urls.getPostsAndRoles,
+        data:{
+          id:row.id
         },
-      };
-      this.postOptions=[
-        {
-          postName: "董事长",
-          status: "0",
-          postId: 1
-        },
-        {
-          postName: "项目经理",
-          status: "0",
-          postId: 2
-        },
-        {
-          postName: "人力资源",
-          postId: 3,
-          status: "0"
-        }
-      ];
-      this.roleOptions=[
-        {
-          roleId: 2,
-          roleName: "普通角色",
-          status: "0"
-        }
-      ];
-      this.$set(this.form, "postIds", [2]);
-      this.$set(this.form, "roleIds", [2]);
-      this.open = true;
-      this.title = "修改用户";
+      }).then(res=>{
+        if(res.data.status===0)
+        this.form=res.data.data;
+        //读取map
+        this.postOptions=res.data.data.postRole["post"];
+        this.roleOptions=res.data.data.postRole["role"];
+        this.$set(this.form, "postId", res.data.data.postId);
+        this.$set(this.form, "roleId", res.data.data.roleId);
+        this.open = true;
+        this.title = "修改用户";
+      }).catch((res)=>{
+        this.$message.error(res.data.msg)
+      })
+
+
+
+
+      // this.form = {
+      //   deptId: 6,
+      //   email: "ry@163.com",
+      //   createTime: "2023-04-23 16:11:38",
+      //   id: 2,
+      //   userName: "admin",
+      //   sex: "1",
+      //   status: 1,
+      //   remark: "管理员",
+      //   phone: "15888888888",
+      //   password: null,
+      //   nickName: "若依",
+      // };
+      // this.postOptions=[
+      //   {
+      //     postName: "董事长",
+      //     status: "0",
+      //     postId: 1
+      //   },
+      //   {
+      //     postName: "项目经理",
+      //     status: "0",
+      //     postId: 2
+      //   },
+      //   {
+      //     postName: "人力资源",
+      //     postId: 3,
+      //     status: "0"
+      //   }
+      // ];
+      // this.roleOptions=[
+      //   {
+      //     roleId: 2,
+      //     roleName: "普通角色",
+      //     status: "0"
+      //   }
+      // ];
+
       // this.form = response.data;
       // this.postOptions = response.posts;
       // this.roleOptions = response.roles;
@@ -673,44 +719,53 @@ export default {
     /** 新增按钮操作 */
     handleAdd() {
       this.reset();
-      let response=this.getUser();
-      console.log(response);
-      this.postOptions=[
-        {
-          postName: "董事长",
-          status: "0",
-          postId: 1
-        },
-        {
-          postName: "项目经理",
-          status: "0",
-          postId: 2
-        },
-        {
-          postName: "人力资源",
-          postId: 3,
-          status: "0"
+      axios({
+        method: "post",
+        url:this.urls.getPostsAndRoles
+      }).then(res=>{
+        this.open = true;
+        this.title = "添加用户";
+        if(res.data.status===0){
+          //读取map
+          this.postOptions=res.data.data.postRole["post"];
+          this.roleOptions=res.data.data.postRole["role"];
         }
-      ];
-      this.roleOptions=[
-        {
-          roleId: 2,
-          roleName: "普通角色",
-          status: "0"
+      }).catch((res)=>{
+        if(res.data.status!=0){
+          this.$message.error(res.data.msg);
         }
-      ];
-      this.open = true;
-      this.title = "添加用户";
-
+      })
+      //     [
+      //   {
+      //     postName: "董事长",
+      //     status: "0",
+      //     postId: 1
+      //   },
+      //   {
+      //     postName: "项目经理",
+      //     status: "0",
+      //     postId: 2
+      //   },
+      //   {
+      //     postName: "人力资源",
+      //     postId: 3,
+      //     status: "0"
+      //   }
+      // ];
+      // [
+      //   {
+      //     roleId: 2,
+      //     roleName: "普通角色",
+      //     status: "0"
+      //   }
+      // ];
       //   this.postOptions = response.data.data.posts;
       //   this.roleOptions = response.data.data.roles;
-
-
     },
     // 表单重置
     reset() {
       this.form = {
-        userId: undefined,
+        id: undefined,
         deptId: undefined,
         userName: undefined,
         nickName: undefined,
@@ -720,14 +775,14 @@ export default {
         sex: undefined,
         status: 1,
         remark: undefined,
-        postIds: [],
-        roleIds: []
+        postId: [],
+        roleId: []
       };
       this.resetForm("form");
     },
     // 多选框选中数据
     handleSelectionChange(selection) {
-      this.ids = selection.map(item => item.userId);
+      this.ids = selection.map(item => item.id);
       this.single = selection.length != 1;
       this.multiple = !selection.length;
     },
@@ -735,26 +790,34 @@ export default {
 
     /** 删除按钮操作 */
     handleDelete(row) {
-      const userIds = row.userId || this.ids;
+      const userIds = row.id || this.ids;
       this.$confirm('是否删除选中的所有用户?删除后无法恢复!', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
-        let res = this.delUser(userIds);
-
-        if(res.data.code===222){
-          this.getList();
-          this.$message({
-            type: 'success',
-            message: '删除成功!'
-          });
-        }else{
-          this.$message({
-            type: 'error',
-            message: res.data.message
-          });
-        }
+        axios({
+          url: this.urls.delete,
+          method: 'post',
+          data:{
+            ids:userIds
+          }
+        }).then(res=>{
+          if(res.data.data===0){
+            this.getList();
+            this.$message({
+              type: 'success',
+              message: '删除成功!'
+            });
+          }else{
+            this.$message({
+              type: 'error',
+              message: res.data.msg
+            });
+          }
+        }).catch(res=>{
+          this.$message.error(res.data.msg);
+        })
       }).catch(() => {});
     },
     // 用户状态修改
@@ -765,20 +828,30 @@ export default {
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
-         let res=this.changeUserStatus(row.userId, row.status);
-         if(res.data.code===333){
-           row.status = row.status === "0" ? "1" : "0";
-           this.$message({
-             type: 'error',
-             message: res.data.message
-           });
-         }else {
-           this.$message({
-             type: 'success',
-             message: text+'成功!'
-           });
-         }
-
+        this.statusParams.id=row.id;
+        this.statusParams.status=row.status;
+        axios({
+          method:"post",
+          url:this.urls.changeUserStatus,
+          data:this.statusParams
+        }).then(res=>{
+          this.statusParams.id=undefined;
+          this.statusParams.status=undefined;
+          if(res.data.status===0){
+            this.$message({
+              type: 'success',
+              message: text+'成功!'
+            });
+          }else {
+            row.status = row.status === "0" ? "1" : "0";
+            this.$message({
+              type: 'error',
+              message: res.data.data.msg
+            });
+          }
+        }).catch((res) => {
+          this.$message.error(res.data.msg)
+        })
       }).catch(function() {
         row.status = row.status === "0" ? "1" : "0";
       });
@@ -791,31 +864,54 @@ export default {
 
     /** 下载模板操作 */
     importTemplate() {
-      alert("下载模板");
-      // axios({
-      //   url: this.urls.downloadTemplate,
-      //   data:{},
-      //   method:"GET"
-      // }).then(res=>{
-      //   this.$message.success("下载模板成功");
-      // }).catch(res=>{
-      //   this.$message.success(res.data.message);
-      // })
+     axios({
+        url: this.urls.downloadTemplate,
+        method:"post",
+       responseType: 'blob',
+      }).then(res=>{
+       const blob = new Blob([res.data], {
+         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8",
+       });
+       const a = document.createElement("a");
+       const href = window.URL.createObjectURL(blob);
+       a.href = href;
+       a.download = '用户表模板.xlsx';
+       a.style.display='none';
+       document.body.appendChild(a);
+       a.click();
+       window.URL.revokeObjectURL(href);
+       document.body.removeChild(a);
+        this.$message.success("下载模板成功");
+      }).catch(res=>{
+        this.$message.success(res.data.msg);
+      })
     },
 
 
     /** 导出按钮操作 */
     handleExport() {
-      alert("导出成功");
-       // axios({
-       //   url: this.urls.exportExcel,
-       //   data:{},
-       //   method:"GET"
-       // }).then(res=>{
-       //   this.$message.success("导出成功");
-       // }).catch(res=>{
-       //   this.$message.success(res.data.message);
-       // })
+       axios({
+         url: this.urls.exportExcel,
+         method:"post",
+         responseType: 'blob',
+       }).then(res=>{
+         const blob = new Blob([res.data], {
+           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8",
+         });
+         const a = document.createElement("a");
+         const href = window.URL.createObjectURL(blob);
+         a.href = href;
+         // a.download = '';
+         a.style.display='none';
+         a.setAttribute('download','用户表.xlsx')
+         document.body.appendChild(a);
+         a.click();
+         window.URL.revokeObjectURL(href);
+         document.body.removeChild(a);
+         this.$message.success("导出成功");
+       }).catch(res=>{
+         this.$message.success(res.data.msg);
+       })
     },
 
     // 转换字符串，undefined,null等转化为""
@@ -826,50 +922,7 @@ export default {
       return str;
     },
 
-    changeUserStatus(userId, status){
-      let response={};
-      response={
-        data:{
-          code:222,
-          message:"success",
-          data:null
-        }
-      };
-      // axios({
-      //   method:"post",
-      //   url:this.urls.changeUserStatus,
-      //   data:{
-      //     userId:userId,
-      //     status:status
-      //   }
-      // }).then(res=>{
-      //   response=res;
-      // }).catch((res) => {
-      //   this.$message.error(res.data.message)
-      // })
-      return response;
-    },
-    delUser(userId) {
-      let response={};
 
-      response={
-        data:{
-          code:222,
-          message:"success",
-          data:null
-        }
-      }
-      // axios({
-      //   url: this.urls.delete + userId,
-      //   method: 'get'
-      // }).then(res=>{
-      //   response=res;
-      // }).catch(res=>{
-      //   // this.$message.error(res.data.message);
-      // })
-      // console.log(response)
-      return response;
-    },
     // 文件上传中处理
     handleFileUploadProgress(event, file, fileList) {
       this.upload.isUploading = true;
@@ -879,7 +932,7 @@ export default {
       this.upload.open = false;
       this.upload.isUploading = false;
       this.$refs.upload.clearFiles();
-      this.$alert("<div style='overflow: auto;overflow-x: hidden;max-height: 70vh;padding: 10px 20px 0;'>" + response.data.message + "</div>", "导入结果", { dangerouslyUseHTMLString: true });
+      this.$alert("<div style='overflow: auto;overflow-x: hidden;max-height: 70vh;padding: 10px 20px 0;'>" + response.data + "</div>", "导入结果", { dangerouslyUseHTMLString: true });
       this.getList();
     },
     // 提交上传文件
@@ -926,18 +979,7 @@ export default {
       })
       return time_str
     },
-    // load(){
-    //   let data='name=yhz'
-    //   axios({
-    //     method:"post",
-    //     data:data,
-    //     url:"/test/list"
-    //   }).then(res=>{
-    //       if(res.data.code==200){
-    //         console.log(res.data.data)
-    //       }
-    //   })
-    // }
+
   }
 }
 </script>
